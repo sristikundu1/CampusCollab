@@ -1,0 +1,52 @@
+openapi: 3.1.0
+info:
+  title: CampusCollab API
+  version: 0.1.0
+  description: Phase 5 foundation-only contract. Business endpoints remain documented in the Phase 4 architecture.
+servers:
+  - url: http://localhost:5000
+paths:
+  /health:
+    get:
+      summary: Process liveness
+      responses:
+        '200':
+          description: Process is alive
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthResponse'
+  /ready:
+    get:
+      summary: Required dependency readiness
+      responses:
+        '200': { description: Ready }
+        '503': { description: MongoDB is unavailable }
+  /health/live:
+    get:
+      summary: Canonical Phase 4 liveness alias
+      responses:
+        '200': { description: Process is alive }
+  /health/ready:
+    get:
+      summary: Canonical Phase 4 readiness alias
+      responses:
+        '200': { description: Ready }
+        '503': { description: MongoDB is unavailable }
+components:
+  schemas:
+    HealthResponse:
+      type: object
+      required: [data, meta]
+      properties:
+        data:
+          type: object
+          required: [status]
+          properties:
+            status: { type: string, const: alive }
+        meta:
+          type: object
+          required: [requestId]
+          properties:
+            requestId: { type: string }
+

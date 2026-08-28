@@ -1,0 +1,2 @@
+export function FormField({ label, error, hint, ...props }) { const id = props.id || props.name; return <label htmlFor={id} className="block"><span className="mb-2 block text-sm font-semibold text-slate-700">{label}</span><input id={id} className="field" aria-invalid={Boolean(error)} aria-describedby={error ? `${id}-error` : undefined} {...props}/>{error ? <span id={`${id}-error`} className="mt-1.5 block text-xs font-medium text-rose-600">{error}</span> : hint ? <span className="mt-1.5 block text-xs text-slate-500">{hint}</span> : null}</label>; }
+
