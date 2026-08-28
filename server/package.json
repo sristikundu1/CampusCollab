@@ -12,9 +12,11 @@
     "start": "node src/server.js",
     "test": "node --test --test-concurrency=1",
     "test:unit": "node --test --test-concurrency=1 tests/unit",
+    "test:smoke:profile": "node scripts/smoke-profile-api.js",
     "check": "node scripts/check-project.js",
     "db:verify-indexes": "node scripts/verify-database-indexes.js",
     "db:seed:uiu": "node scripts/seed-uiu.js",
+    "db:seed:skills": "node scripts/seed-skills.js",
     "db:migrate:test": "node scripts/migrate-test-database.js"
   },
   "dependencies": {

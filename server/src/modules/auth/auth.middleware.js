@@ -18,12 +18,19 @@ export function createAuthenticationMiddleware({ config, authService }) {
       next();
     } catch (error) { next(error); }
   }
+  async function optionalAuthenticate(request, _response, next) {
+    try {
+      request.rawSessionToken = readCookie(request.headers.cookie, config.sessionCookieName);
+      if (!request.rawSessionToken) return next();
+      request.auth = await authService.authenticate(request.rawSessionToken);
+      return next();
+    } catch (error) { return next(error); }
+  }
   function requireCsrf(request, _response, next) {
     if (!config.csrfSecret) return next(new AuthenticationError('CSRF_NOT_CONFIGURED', 'Request security is not configured.'));
     const supplied = request.get('x-csrf-token');
     if (!supplied || !opaqueTokenMatches(request.rawSessionToken, supplied, config.csrfSecret)) return next(new AuthorizationError('CSRF_VALIDATION_FAILED', 'Request security validation failed.'));
     return next();
   }
-  return { authenticate, requireCsrf };
+  return { authenticate, optionalAuthenticate, requireCsrf };
 }
-

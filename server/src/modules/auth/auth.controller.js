@@ -1,7 +1,12 @@
 import { hashOpaqueToken } from '../../lib/crypto/opaque-token.js';
 
 export function createAuthController({ config, authService }) {
-  const cookieOptions = { httpOnly: true, secure: config.isProduction, sameSite: 'lax', path: '/' };
+  const cookieOptions = {
+    httpOnly: true,
+    secure: config.isProduction,
+    sameSite: config.isProduction ? 'none' : 'lax',
+    path: '/',
+  };
   const respond = (response, request, data, status = 200) => response.status(status).json({ data, meta: { requestId: request.id } });
   return {
     register: async (request, response) => respond(response, request, await authService.register(request.validated.body), 201),
@@ -21,4 +26,3 @@ export function createAuthController({ config, authService }) {
     reset: async (request, response) => respond(response, request, await authService.resetPassword(request.validated.body)),
   };
 }
-

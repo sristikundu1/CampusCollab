@@ -20,3 +20,18 @@ export const authApi = {
   me: () => api.get('/auth/me'), verify: (token) => api.post('/auth/verify-email', { token }), resend: (email) => api.post('/auth/verification/resend', { email }),
   forgot: (email) => api.post('/auth/password/forgot', { email }), reset: (body) => api.post('/auth/password/reset', body),
 };
+
+export const profileApi = {
+  own: () => api.get('/profiles/me'),
+  public: (userId) => api.get(`/profiles/${userId}`),
+  update: (body) => api.patch('/profiles/me', body),
+  replaceSkills: (skills) => api.put('/profiles/me/skills', { skills }),
+  updateAvailability: (body) => api.patch('/profiles/me/availability', body),
+  ownPortfolio: () => api.get('/profiles/me/portfolio-items'),
+  publicPortfolio: (userId) => api.get(`/profiles/${userId}/portfolio-items`),
+  createPortfolio: (body) => api.post('/profiles/me/portfolio-items', body),
+  updatePortfolio: (itemId, body) => api.patch(`/portfolio-items/${itemId}`, body),
+  deletePortfolio: (itemId) => api.delete(`/portfolio-items/${itemId}`),
+};
+
+export const skillApi = { list: (q = '') => api.get('/skills', { params: { q, limit: 100 } }) };
