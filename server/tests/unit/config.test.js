@@ -47,5 +47,6 @@ test('optional email placeholders do not block local development', () => {
 
 test('production configuration requires HTTPS origins', () => {
   assert.throws(() => parseEnvironment({ ...valid, NODE_ENV: 'production' }), ConfigurationError);
-  assert.throws(() => parseEnvironment({ ...valid, NODE_ENV: 'production', CLIENT_URL: 'https://app.example.com', API_URL: 'https://api.example.com', SMTP_HOST: 'smtp.example.com', SMTP_USER: 'user', SMTP_PASSWORD: 'password', EMAIL_FROM: 'mail@example.com', REQUIRE_EMAIL_VERIFICATION: 'false' }), ConfigurationError);
+  assert.doesNotThrow(() => parseEnvironment({ ...valid, NODE_ENV: 'production', CLIENT_URL: 'https://app.example.com', API_URL: 'https://api.example.com', REQUIRE_EMAIL_VERIFICATION: 'false' }));
+  assert.throws(() => parseEnvironment({ ...valid, NODE_ENV: 'production', CLIENT_URL: 'https://app.example.com', API_URL: 'https://api.example.com', REQUIRE_EMAIL_VERIFICATION: 'true' }), ConfigurationError);
 });

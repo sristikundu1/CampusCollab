@@ -66,11 +66,10 @@ const environmentSchema = z
           context.addIssue({ code: 'custom', path: [key], message: `${key} must use HTTPS in production` });
         }
       }
-      for (const key of ['SMTP_HOST', 'SMTP_USER', 'SMTP_PASSWORD', 'EMAIL_FROM']) {
-        if (!value[key]) context.addIssue({ code: 'custom', path: [key], message: `${key} is required in production` });
-      }
-      if (!value.REQUIRE_EMAIL_VERIFICATION) {
-        context.addIssue({ code: 'custom', path: ['REQUIRE_EMAIL_VERIFICATION'], message: 'Email verification cannot be disabled in production' });
+      if (value.REQUIRE_EMAIL_VERIFICATION) {
+        for (const key of ['SMTP_HOST', 'SMTP_USER', 'SMTP_PASSWORD', 'EMAIL_FROM']) {
+          if (!value[key]) context.addIssue({ code: 'custom', path: [key], message: `${key} is required when email verification is enabled` });
+        }
       }
     }
   });
