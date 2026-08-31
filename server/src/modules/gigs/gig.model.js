@@ -24,6 +24,6 @@ gigSchema.index({ status: 1, 'skillRequirements.skillId': 1, createdAt: -1, _id:
 gigSchema.index({ status: 1, workMode: 1, createdAt: -1, _id: -1 }, { name: 'ix_gigs_work_mode_feed' });
 gigSchema.index({ status: 1, deadlineAt: 1 }, { name: 'ix_gigs_status_deadline' });
 gigSchema.index({ universityId: 1, status: 1, createdAt: -1, _id: -1 }, { name: 'ix_gigs_university_feed' });
+gigSchema.index({ title: 'text', description: 'text', category: 'text' }, { weights: { title: 10, category: 5, description: 1 }, name: 'tx_gigs_discovery' });
 
 export const Gig = model('Gig', gigSchema, 'gigs');
-

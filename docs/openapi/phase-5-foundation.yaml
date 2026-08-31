@@ -1,8 +1,8 @@
 openapi: 3.1.0
 info:
   title: CampusCollab API
-  version: 0.1.0
-  description: Phase 5 foundation-only contract. Business endpoints remain documented in the Phase 4 architecture.
+  version: 0.3.0
+  description: Implemented CampusCollab foundation, authentication, profiles, and Gigs Marketplace contract.
 servers:
   - url: http://localhost:5000
 paths:
@@ -33,8 +33,118 @@ paths:
       responses:
         '200': { description: Ready }
         '503': { description: MongoDB is unavailable }
+  /api/v1/gigs:
+    get:
+      summary: Discover published visible gigs
+      parameters:
+        - { in: query, name: q, schema: { type: string, minLength: 2, maxLength: 80 } }
+        - { in: query, name: skillId, schema: { type: string, pattern: '^[a-fA-F0-9]{24}$' } }
+        - { in: query, name: category, schema: { type: string, maxLength: 80 } }
+        - { in: query, name: workMode, schema: { type: string, enum: [REMOTE, HYBRID, ONSITE] } }
+        - { in: query, name: sort, schema: { type: string, enum: [NEWEST, DEADLINE], default: NEWEST } }
+        - { in: query, name: cursor, schema: { type: string } }
+        - { in: query, name: limit, schema: { type: integer, minimum: 1, maximum: 50, default: 12 } }
+      responses:
+        '200': { description: Cursor-paginated public gig cards }
+        '422': { $ref: '#/components/responses/ValidationError' }
+    post:
+      summary: Create an owned gig draft
+      security: [{ sessionCookie: [], csrfToken: [] }]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: '#/components/schemas/GigWrite' } } }
+      responses:
+        '201': { description: Draft created }
+        '401': { description: Authentication required }
+        '422': { $ref: '#/components/responses/ValidationError' }
+  /api/v1/gigs/mine:
+    get:
+      summary: List gigs owned by the authenticated user
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - { in: query, name: status, schema: { $ref: '#/components/schemas/GigStatus' } }
+        - { in: query, name: cursor, schema: { type: string } }
+        - { in: query, name: limit, schema: { type: integer, minimum: 1, maximum: 50 } }
+      responses:
+        '200': { description: Cursor-paginated owned gigs }
+  /api/v1/gigs/{gigId}:
+    parameters: [{ $ref: '#/components/parameters/GigId' }]
+    get:
+      summary: Read a visible gig or an owned private-state gig
+      responses:
+        '200': { description: Visibility-safe gig detail }
+        '404': { description: Missing or concealed gig }
+    patch:
+      summary: Edit an owned draft or published gig
+      security: [{ sessionCookie: [], csrfToken: [] }]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: '#/components/schemas/GigWritePartial' } } }
+      responses:
+        '200': { description: Updated owned gig }
+        '404': { description: Missing or non-owned gig }
+        '409': { description: Invalid lifecycle state or capacity conflict }
+        '422': { $ref: '#/components/responses/ValidationError' }
+  /api/v1/gigs/{gigId}:publish:
+    post: { summary: Publish an owned draft, security: [{ sessionCookie: [], csrfToken: [] }], parameters: [{ $ref: '#/components/parameters/GigId' }], responses: { '200': { description: Published }, '409': { description: Invalid state or incomplete gig } } }
+  /api/v1/gigs/{gigId}:close:
+    post: { summary: Close an owned published gig, security: [{ sessionCookie: [], csrfToken: [] }], parameters: [{ $ref: '#/components/parameters/GigId' }], responses: { '200': { description: Closed }, '409': { description: Invalid state } } }
+  /api/v1/gigs/{gigId}:cancel:
+    post: { summary: Cancel an eligible owned gig with a reason, security: [{ sessionCookie: [], csrfToken: [] }], parameters: [{ $ref: '#/components/parameters/GigId' }], responses: { '200': { description: Cancelled }, '409': { description: Invalid state }, '422': { $ref: '#/components/responses/ValidationError' } } }
+  /api/v1/gigs/{gigId}:archive:
+    post: { summary: Archive an eligible owned gig, security: [{ sessionCookie: [], csrfToken: [] }], parameters: [{ $ref: '#/components/parameters/GigId' }], responses: { '200': { description: Archived }, '409': { description: Invalid state } } }
+  /api/v1/gigs/{gigId}:start:
+    post: { summary: Start an assigned owned gig, security: [{ sessionCookie: [], csrfToken: [] }], parameters: [{ $ref: '#/components/parameters/GigId' }], responses: { '200': { description: Active }, '409': { description: Invalid state } } }
+  /api/v1/gigs/{gigId}/bookmark:
+    parameters: [{ $ref: '#/components/parameters/GigId' }]
+    post: { summary: Bookmark a visible gig idempotently, security: [{ sessionCookie: [], csrfToken: [] }], responses: { '200': { description: Existing bookmark }, '201': { description: Bookmark created }, '404': { description: Gig not visible } } }
+    delete: { summary: Remove the authenticated user's bookmark idempotently, security: [{ sessionCookie: [], csrfToken: [] }], responses: { '204': { description: Bookmark absent } } }
+  /api/v1/users/me/bookmarked-gigs:
+    get:
+      summary: List the authenticated user's visible bookmarked gigs
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - { in: query, name: cursor, schema: { type: string } }
+        - { in: query, name: limit, schema: { type: integer, minimum: 1, maximum: 50 } }
+      responses: { '200': { description: Cursor-paginated bookmarked gigs } }
 components:
+  securitySchemes:
+    sessionCookie: { type: apiKey, in: cookie, name: campuscollab_session }
+    csrfToken: { type: apiKey, in: header, name: X-CSRF-Token }
+  parameters:
+    GigId: { in: path, name: gigId, required: true, schema: { type: string, pattern: '^[a-fA-F0-9]{24}$' } }
+  responses:
+    ValidationError: { description: Strict request validation failed }
   schemas:
+    GigStatus: { type: string, enum: [DRAFT, PUBLISHED, ASSIGNED, ACTIVE, COMPLETION_PENDING, COMPLETED, CLOSED, CANCELLED, ARCHIVED] }
+    SkillRequirement:
+      type: object
+      additionalProperties: false
+      required: [skillId, level]
+      properties:
+        skillId: { type: string, pattern: '^[a-fA-F0-9]{24}$' }
+        level: { type: string, enum: [BEGINNER, INTERMEDIATE, ADVANCED] }
+        required: { type: boolean, default: true }
+    GigWriteFields:
+      type: object
+      additionalProperties: false
+      properties:
+        title: { type: string, minLength: 5, maxLength: 180 }
+        description: { type: string, minLength: 20, maxLength: 10000 }
+        category: { type: string, minLength: 2, maxLength: 80 }
+        skillRequirements: { type: array, maxItems: 20, uniqueItems: true, items: { $ref: '#/components/schemas/SkillRequirement' } }
+        workMode: { type: string, enum: [REMOTE, HYBRID, ONSITE], default: REMOTE }
+        locationText: { type: string, maxLength: 160 }
+        visibility: { type: string, enum: [PLATFORM, UNIVERSITY], default: PLATFORM }
+        budget: { type: object, additionalProperties: false, properties: { type: { type: string, enum: [FIXED, RANGE, UNPAID] }, minMinor: { type: integer, minimum: 0 }, maxMinor: { type: integer, minimum: 0 }, currency: { type: string, minLength: 3, maxLength: 3 } } }
+        deadlineAt: { type: [string, 'null'], format: date-time }
+        capacity: { type: integer, minimum: 1, maximum: 100, default: 1 }
+    GigWrite:
+      allOf: [{ $ref: '#/components/schemas/GigWriteFields' }]
+      required: [title, description, category]
+    GigWritePartial:
+      allOf: [{ $ref: '#/components/schemas/GigWriteFields' }]
+      minProperties: 1
     HealthResponse:
       type: object
       required: [data, meta]
@@ -49,4 +159,3 @@ components:
           required: [requestId]
           properties:
             requestId: { type: string }
-

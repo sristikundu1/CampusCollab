@@ -13,13 +13,15 @@ import { createEmailService } from './lib/email/email-service.js';
 import { createAuthService } from './modules/auth/auth.service.js';
 import { createProfileService } from './modules/profiles/profile.service.js';
 import { createSkillService } from './modules/skills/skill.service.js';
+import { createGigService } from './modules/gigs/gig.service.js';
 
-export function createApp({ config, logger, databaseReadiness, authService: authServiceOverride, emailService: emailServiceOverride, profileService: profileServiceOverride, skillService: skillServiceOverride }) {
+export function createApp({ config, logger, databaseReadiness, authService: authServiceOverride, emailService: emailServiceOverride, profileService: profileServiceOverride, skillService: skillServiceOverride, gigService: gigServiceOverride }) {
   const app = express();
   const emailService = emailServiceOverride ?? createEmailService(config, logger);
   const authService = authServiceOverride ?? createAuthService({ config, emailService });
   const profileService = profileServiceOverride ?? createProfileService();
   const skillService = skillServiceOverride ?? createSkillService();
+  const gigService = gigServiceOverride ?? createGigService({ config });
   app.disable('x-powered-by');
   app.set('trust proxy', config.trustProxy);
   app.use(requestContext);
@@ -66,7 +68,7 @@ export function createApp({ config, logger, databaseReadiness, authService: auth
   app.get('/ready', ready);
   app.get('/health/live', health);
   app.get('/health/ready', ready);
-  app.use('/api/v1', createV1Router({ config, authService, profileService, skillService }));
+  app.use('/api/v1', createV1Router({ config, authService, profileService, skillService, gigService }));
   app.use(notFoundHandler);
   app.use(createErrorHandler({ logger, environment: config.nodeEnv }));
   return app;

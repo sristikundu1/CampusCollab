@@ -13,6 +13,7 @@
     "test": "node --test --test-concurrency=1",
     "test:unit": "node --test --test-concurrency=1 tests/unit",
     "test:smoke:profile": "node scripts/smoke-profile-api.js",
+    "test:smoke:gigs": "node scripts/smoke-gigs-api.js",
     "check": "node scripts/check-project.js",
     "db:verify-indexes": "node scripts/verify-database-indexes.js",
     "db:seed:uiu": "node scripts/seed-uiu.js",

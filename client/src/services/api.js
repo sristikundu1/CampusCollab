@@ -35,3 +35,15 @@ export const profileApi = {
 };
 
 export const skillApi = { list: (q = '') => api.get('/skills', { params: { q, limit: 100 } }) };
+
+export const gigApi = {
+  list: (params = {}) => api.get('/gigs', { params }),
+  mine: (params = {}) => api.get('/gigs/mine', { params }),
+  get: (gigId) => api.get(`/gigs/${gigId}`),
+  create: (body) => api.post('/gigs', body),
+  update: (gigId, body) => api.patch(`/gigs/${gigId}`, body),
+  transition: (gigId, action, body = {}) => api.post(`/gigs/${gigId}:${action}`, body),
+  bookmark: (gigId) => api.post(`/gigs/${gigId}/bookmark`),
+  removeBookmark: (gigId) => api.delete(`/gigs/${gigId}/bookmark`),
+  bookmarks: (params = {}) => api.get('/users/me/bookmarked-gigs', { params }),
+};
