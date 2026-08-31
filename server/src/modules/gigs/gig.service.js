@@ -115,6 +115,15 @@ export function createGigService({ config, GigModel = Gig, BookmarkModel = Bookm
     try { const bookmark = await BookmarkModel.create({ userId, gigId }); return { created: true, bookmark: { gigId: String(bookmark.gigId), createdAt: bookmark.createdAt } }; } catch (error) { if (error?.code !== 11000) throw error; const bookmark = await BookmarkModel.findOne({ userId, gigId }).lean(); return { created: false, bookmark: { gigId: String(bookmark.gigId), createdAt: bookmark.createdAt } }; }
   }
   async function removeBookmark(userId, gigId) { await BookmarkModel.deleteOne({ userId, gigId }); }
+  async function remove(userId, gigId) {
+    const gig = await GigModel.findOne({ _id: gigId, ownerId: userId });
+    if (!gig) throw new NotFoundError();
+    if (!['DRAFT', 'ARCHIVED'].includes(gig.status)) throw new ConflictError('PERMANENT_DELETE_NOT_ALLOWED', 'Close and archive this gig before deleting it permanently.');
+    if (gig.proposalCount > 0 || gig.acceptedCount > 0) throw new ConflictError('GIG_HAS_COLLABORATION_HISTORY', 'A gig with proposals or accepted collaborators cannot be permanently deleted.');
+    const deleted = await GigModel.deleteOne({ _id: gig._id, ownerId: userId, status: gig.status, version: gig.version });
+    if (deleted.deletedCount !== 1) throw new ConflictError('CONCURRENT_MODIFICATION', 'The gig changed while it was being deleted. Refresh and try again.');
+    await BookmarkModel.deleteMany({ gigId: gig._id });
+  }
   async function bookmarks(userId, input) {
     const scope = `bookmarks:${userId}`; const filter = { userId, ...cursorFilter(input.cursor, scope) };
     const found = await BookmarkModel.find(filter).sort({ createdAt: -1, _id: -1 }).limit(input.limit + 1).lean(); const result = page(found, input.limit, scope);
@@ -122,5 +131,5 @@ export function createGigService({ config, GigModel = Gig, BookmarkModel = Bookm
     const gigs = await GigModel.find({ _id: { $in: result.values.map((entry) => entry.gigId) }, ...visibleFilter(viewerAffiliation) }).lean(); const order = new Map(result.values.map((entry, index) => [String(entry.gigId), index])); gigs.sort((a, b) => order.get(String(a._id)) - order.get(String(b._id)));
     return { gigs: await enrich(gigs, userId), nextCursor: result.nextCursor, hasMore: result.hasMore };
   }
-  return { create, list, mine, get, update, transition, addBookmark, removeBookmark, bookmarks };
+  return { create, list, mine, get, update, transition, remove, addBookmark, removeBookmark, bookmarks };
 }

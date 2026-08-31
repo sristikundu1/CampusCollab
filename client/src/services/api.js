@@ -42,6 +42,7 @@ export const gigApi = {
   get: (gigId) => api.get(`/gigs/${gigId}`),
   create: (body) => api.post('/gigs', body),
   update: (gigId, body) => api.patch(`/gigs/${gigId}`, body),
+  remove: (gigId) => api.delete(`/gigs/${gigId}`),
   transition: (gigId, action, body = {}) => api.post(`/gigs/${gigId}:${action}`, body),
   bookmark: (gigId) => api.post(`/gigs/${gigId}/bookmark`),
   removeBookmark: (gigId) => api.delete(`/gigs/${gigId}/bookmark`),

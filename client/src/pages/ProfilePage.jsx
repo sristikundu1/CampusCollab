@@ -8,6 +8,7 @@ import { SkillsEditor } from '../components/profile/SkillsEditor.jsx';
 import { useAuth } from '../context/auth-context.js';
 import { useToast } from '../context/toast-context.js';
 import { AppShell } from '../layouts/AppShell.jsx';
+import { confirmAction } from '../lib/confirm-action.js';
 import { apiError, profileApi, skillApi } from '../services/api.js';
 
 function ProfileSkeleton(){return <AppShell><div className="mx-auto max-w-5xl animate-pulse space-y-5"><div className="h-52 rounded-3xl bg-slate-200"/><div className="grid gap-5 md:grid-cols-2"><div className="h-64 rounded-3xl bg-slate-200"/><div className="h-64 rounded-3xl bg-slate-200"/></div></div></AppShell>}
@@ -26,7 +27,7 @@ export function ProfilePage(){
   const saveAvailability=(body)=>perform('availability',async()=>({profile:(await profileApi.updateAvailability(body)).data.data.profile}),'Availability updated.');
   const createPortfolio=(body)=>perform('portfolio',async()=>{const item=(await profileApi.createPortfolio(body)).data.data.item;return{items:[item,...items]};},'Portfolio project added.');
   const updatePortfolio=(id,body)=>perform('portfolio',async()=>{const item=(await profileApi.updatePortfolio(id,body)).data.data.item;return{items:items.map((entry)=>entry.id===id?item:entry)}},'Portfolio project updated.');
-  const deletePortfolio=async(id)=>{if(!window.confirm('Remove this portfolio project?'))return;await perform('portfolio',async()=>{await profileApi.deletePortfolio(id);return{items:items.filter((entry)=>entry.id!==id)}},'Portfolio project removed.')};
+  const deletePortfolio=async(id)=>{const confirmed=await confirmAction({title:'Remove portfolio project?',text:'This project will be removed from your CampusCollab profile.',confirmText:'Remove project',icon:'warning',danger:true});if(!confirmed)return;await perform('portfolio',async()=>{await profileApi.deletePortfolio(id);return{items:items.filter((entry)=>entry.id!==id)}},'Portfolio project removed.')};
   const initials=profile.displayName.split(/\s+/).map((part)=>part[0]).slice(0,2).join('').toUpperCase();
   const VisibilityIcon=profile.visibility==='PRIVATE'?LockKeyhole:Eye;
   return <AppShell><div className="mx-auto max-w-5xl">

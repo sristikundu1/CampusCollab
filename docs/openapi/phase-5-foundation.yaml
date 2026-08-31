@@ -70,9 +70,11 @@ paths:
   /api/v1/gigs/{gigId}:
     parameters: [{ $ref: '#/components/parameters/GigId' }]
     get:
-      summary: Read a visible gig or an owned private-state gig
+      summary: Read a visible gig or an owned private-state gig as an authenticated user
+      security: [{ sessionCookie: [] }]
       responses:
         '200': { description: Visibility-safe gig detail }
+        '401': { description: Authentication required }
         '404': { description: Missing or concealed gig }
     patch:
       summary: Edit an owned draft or published gig
@@ -85,6 +87,13 @@ paths:
         '404': { description: Missing or non-owned gig }
         '409': { description: Invalid lifecycle state or capacity conflict }
         '422': { $ref: '#/components/responses/ValidationError' }
+    delete:
+      summary: Permanently delete an owned draft or archived gig with no collaboration history
+      security: [{ sessionCookie: [], csrfToken: [] }]
+      responses:
+        '204': { description: Gig and related bookmarks permanently deleted }
+        '404': { description: Missing or non-owned gig }
+        '409': { description: Invalid lifecycle state, collaboration history, or concurrent modification }
   /api/v1/gigs/{gigId}:publish:
     post: { summary: Publish an owned draft, security: [{ sessionCookie: [], csrfToken: [] }], parameters: [{ $ref: '#/components/parameters/GigId' }], responses: { '200': { description: Published }, '409': { description: Invalid state or incomplete gig } } }
   /api/v1/gigs/{gigId}:close:
