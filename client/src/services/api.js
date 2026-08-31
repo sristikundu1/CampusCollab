@@ -34,7 +34,7 @@ export const profileApi = {
   deletePortfolio: (itemId) => api.delete(`/portfolio-items/${itemId}`),
 };
 
-export const skillApi = { list: (q = '') => api.get('/skills', { params: { q, limit: 100 } }) };
+export const skillApi = { list: (q = '') => api.get('/skills', { params: { q, limit: 100 } }), create: (body) => api.post('/skills', body) };
 
 export const gigApi = {
   list: (params = {}) => api.get('/gigs', { params }),

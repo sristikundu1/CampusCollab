@@ -27,7 +27,7 @@ export function createGigService({ config, GigModel = Gig, BookmarkModel = Bookm
   }
   function visibleFilter(viewerAffiliation) {
     const visibility = viewerAffiliation ? { $or: [{ visibility: 'PLATFORM' }, { visibility: 'UNIVERSITY', universityId: viewerAffiliation.universityId }] } : { visibility: 'PLATFORM' };
-    return { status: 'PUBLISHED', moderationStatus: 'VISIBLE', ...visibility };
+    return { status: 'PUBLISHED', isActive: { $ne: false }, moderationStatus: 'VISIBLE', ...visibility };
   }
   async function enrich(gigs, viewerId, ownerView = false) {
     if (!gigs.length) return [];
@@ -46,7 +46,7 @@ export function createGigService({ config, GigModel = Gig, BookmarkModel = Bookm
       workMode: gig.workMode, locationText: gig.locationText ?? '', visibility: gig.visibility,
       university: gig.universityId && universityMap.get(String(gig.universityId)) ? { id: String(gig.universityId), name: universityMap.get(String(gig.universityId)).name } : null,
       budget: gig.budget ?? null, deadlineAt: gig.deadlineAt ?? null, capacity: gig.capacity, acceptedCount: gig.acceptedCount, proposalCount: gig.proposalCount,
-      acceptingProposals: gig.acceptingProposals, status: gig.status, owner: { id: String(gig.ownerId), displayName: gig.ownerSnapshot?.displayName ?? 'CampusCollab member' },
+      acceptingProposals: gig.acceptingProposals, isActive: gig.isActive !== false, status: gig.status, owner: { id: String(gig.ownerId), displayName: gig.ownerSnapshot?.displayName ?? 'CampusCollab member' },
       isOwner: Boolean(viewerId && String(viewerId) === String(gig.ownerId)), isBookmarked: bookmarked.has(String(gig._id)),
       publishedAt: gig.publishedAt ?? null, createdAt: gig.createdAt, updatedAt: gig.updatedAt,
       ...(ownerView ? { version: gig.version, materialRevision: gig.materialRevision } : {}),
@@ -86,7 +86,7 @@ export function createGigService({ config, GigModel = Gig, BookmarkModel = Bookm
   async function get(gigId, viewerId) {
     const gig = await GigModel.findById(gigId).lean(); if (!gig) throw new NotFoundError();
     const isOwner = viewerId && String(viewerId) === String(gig.ownerId);
-    if (!isOwner) { const viewerAffiliation = viewerId ? await affiliation(viewerId) : null; const visible = gig.status === 'PUBLISHED' && gig.moderationStatus === 'VISIBLE' && (gig.visibility === 'PLATFORM' || (viewerAffiliation && String(viewerAffiliation.universityId) === String(gig.universityId))); if (!visible) throw new NotFoundError(); }
+    if (!isOwner) { const viewerAffiliation = viewerId ? await affiliation(viewerId) : null; const visible = gig.status === 'PUBLISHED' && gig.isActive !== false && gig.moderationStatus === 'VISIBLE' && (gig.visibility === 'PLATFORM' || (viewerAffiliation && String(viewerAffiliation.universityId) === String(gig.universityId))); if (!visible) throw new NotFoundError(); }
     return (await enrich([gig], viewerId, Boolean(isOwner)))[0];
   }
   async function update(userId, gigId, input) {
@@ -101,11 +101,14 @@ export function createGigService({ config, GigModel = Gig, BookmarkModel = Bookm
   }
   async function transition(userId, gigId, action, input = {}) {
     const gig = await GigModel.findOne({ _id: gigId, ownerId: userId }); if (!gig) throw new NotFoundError(); const now = new Date();
-    const target = targetGigState(gig.status, action);
+    const restorablePublished = Boolean(gig.publishedAt) && (!gig.deadlineAt || gig.deadlineAt > now);
+    const restoredState = gig.archivedFromStatus === 'DRAFT' ? 'DRAFT' : restorablePublished ? 'PUBLISHED' : 'DRAFT';
+    const target = targetGigState(gig.status, action, restoredState);
     if (action === 'publish') { if (gig.deadlineAt && gig.deadlineAt <= now) throw new ConflictError('INCOMPLETE_RESOURCE', 'The deadline must be in the future.'); gig.acceptingProposals = true; gig.publishedAt = now; }
     else if (action === 'close') { gig.acceptingProposals = false; gig.closedAt = now; gig.statusReasonCode = input.reasonCode ?? 'OWNER_CLOSED'; }
     else if (action === 'cancel') { if (!input.reasonCode) throw new RequestValidationError([{ location: 'body', path: 'reasonCode', code: 'required', message: 'A cancellation reason is required.' }]); gig.acceptingProposals = false; gig.cancelledAt = now; gig.statusReasonCode = input.reasonCode; }
-    else if (action === 'archive') { gig.acceptingProposals = false; gig.archivedAt = now; }
+    else if (action === 'archive') { gig.archivedFromStatus = gig.status; gig.acceptingProposals = false; gig.isActive = false; gig.archivedAt = now; }
+    else if (action === 'restore') { gig.acceptingProposals = target === 'PUBLISHED'; gig.isActive = true; gig.archivedAt = undefined; gig.archivedFromStatus = undefined; if (target === 'PUBLISHED') gig.closedAt = undefined; }
     else if (action === 'start') gig.startedAt = now;
     gig.status = target;
     gig.version += 1; await gig.save(); return (await enrich([gig.toObject()], userId, true))[0];

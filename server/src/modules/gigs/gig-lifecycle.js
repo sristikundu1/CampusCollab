@@ -5,11 +5,12 @@ const transitions = Object.freeze({
   close: { from: ['PUBLISHED'], to: 'CLOSED' },
   cancel: { from: ['PUBLISHED', 'ASSIGNED', 'ACTIVE'], to: 'CANCELLED' },
   archive: { from: ['DRAFT', 'COMPLETED', 'CLOSED', 'CANCELLED'], to: 'ARCHIVED' },
+  restore: { from: ['ARCHIVED'], to: null },
   start: { from: ['ASSIGNED'], to: 'ACTIVE' },
 });
 
-export function targetGigState(current, action) {
+export function targetGigState(current, action, restoredState = 'DRAFT') {
   const transition = transitions[action];
   if (!transition || !transition.from.includes(current)) throw new ConflictError('INVALID_STATE', 'This gig lifecycle transition is not allowed.');
-  return transition.to;
+  return action === 'restore' ? restoredState : transition.to;
 }

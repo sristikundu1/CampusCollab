@@ -13,7 +13,7 @@ export function createGigRouter(dependencies) {
   router.get('/gigs/:gigId', auth.authenticate, validateRequest(gigRequest), controller.get);
   router.patch('/gigs/:gigId', auth.authenticate, auth.requireCsrf, validateRequest(updateGigRequest), controller.update);
   router.delete('/gigs/:gigId', auth.authenticate, auth.requireCsrf, validateRequest(gigRequest), controller.remove);
-  for (const action of ['publish', 'close', 'archive', 'start', 'cancel']) router.post(`/gigs/:gigId\\:${action}`, auth.authenticate, auth.requireCsrf, validateRequest(transitionGigRequest), controller.transition(action));
+  for (const action of ['publish', 'close', 'archive', 'restore', 'start', 'cancel']) router.post(`/gigs/:gigId\\:${action}`, auth.authenticate, auth.requireCsrf, validateRequest(transitionGigRequest), controller.transition(action));
   router.post('/gigs/:gigId/bookmark', auth.authenticate, auth.requireCsrf, validateRequest(gigRequest), controller.bookmark);
   router.delete('/gigs/:gigId/bookmark', auth.authenticate, auth.requireCsrf, validateRequest(gigRequest), controller.removeBookmark);
   return router;

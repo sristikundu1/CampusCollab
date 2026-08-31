@@ -5,6 +5,7 @@ import { User } from '../../src/modules/auth/user.model.js';
 import { Session } from '../../src/modules/auth/session.model.js';
 import { VerificationChallenge } from '../../src/modules/auth/verification-challenge.model.js';
 import { Proposal } from '../../src/modules/proposals/proposal.model.js';
+import { Gig } from '../../src/modules/gigs/gig.model.js';
 
 test('all Phase 3 MVP collections have a registered model', () => {
   assert.equal(Object.keys(models).length, 27);
@@ -26,6 +27,13 @@ test('sensitive credential fields are excluded by default', () => {
   assert.equal(User.schema.path('passwordHash').options.select, false);
   assert.equal(Session.schema.path('tokenHash').options.select, false);
   assert.equal(VerificationChallenge.schema.path('tokenHash').options.select, false);
+});
+
+test('gigs have a backend-controlled active flag for reversible archiving', async () => {
+  const gig = new Gig({ ownerId: 'aaaaaaaaaaaaaaaaaaaaaaaa', title: 'Build a campus website', description: 'Create a professional responsive website for a student organization.', category: 'Web Development' });
+  assert.equal(gig.isActive, true);
+  gig.isActive = false; gig.status = 'ARCHIVED'; gig.archivedFromStatus = 'DRAFT';
+  await gig.validate();
 });
 
 test('TTL and critical unique indexes match Phase 3', () => {

@@ -1,4 +1,4 @@
-import { AlertCircle, Archive, CircleStop, Eye, Pencil, Plus, Rocket, Trash2 } from 'lucide-react';
+import { AlertCircle, Archive, CircleStop, Eye, Pencil, Plus, Rocket, RotateCcw, Trash2 } from 'lucide-react';
 import { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { GigCard } from '../components/gigs/GigCard.jsx';
@@ -10,7 +10,8 @@ import { apiError, gigApi } from '../services/api.js';
 const confirmation = {
   publish: { title: 'Publish this gig?', text: 'It will become visible to eligible students and start accepting proposals.', confirmText: 'Publish gig', icon: 'question' },
   close: { title: 'Close this gig?', text: 'It will stop accepting proposals but remain in your history.', confirmText: 'Close gig', icon: 'warning', danger: true },
-  archive: { title: 'Archive this gig?', text: 'It will be hidden from active views. Archived gigs cannot currently be republished.', confirmText: 'Archive gig', icon: 'warning', danger: true },
+  archive: { title: 'Make this gig inactive?', text: 'It will move to Archive and disappear from the public feed. You can restore it later.', confirmText: 'Archive gig', icon: 'warning', danger: true },
+  restore: { title: 'Restore this gig?', text: 'A previously published gig with a valid deadline will become active and visible again. Otherwise it returns as a draft.', confirmText: 'Restore gig', icon: 'question' },
   remove: { title: 'Delete this gig permanently?', text: 'This cannot be undone. The gig and its bookmarks will be permanently removed.', confirmText: 'Delete permanently', icon: 'error', danger: true },
 };
 const actionClass = 'inline-flex items-center gap-1.5 rounded-lg border px-3 py-2 text-xs font-bold transition disabled:cursor-wait disabled:opacity-50';
@@ -26,7 +27,7 @@ export function MyGigsPage() {
   const load = useCallback(async (cursor, append = false) => { if (!append) setLoading(true); setError(''); try { const response = await gigApi.mine({ ...(status ? { status } : {}), ...(cursor ? { cursor } : {}) }); setGigs((current) => append ? [...current, ...response.data.data.gigs] : response.data.data.gigs); setPagination(response.data.meta.pagination); } catch (reason) { setError(apiError(reason).message); } finally { setLoading(false); } }, [status]);
   useEffect(() => { void load(); }, [load]);
 
-  const transition = async (gig, action, body = {}) => { if (!await confirmAction(confirmation[action])) return; setBusy(gig.id); try { const updated = (await gigApi.transition(gig.id, action, body)).data.data.gig; setGigs((current) => current.map((item) => item.id === updated.id ? updated : item)); notify({ publish: 'Gig published.', close: 'Gig closed.', archive: 'Gig archived.' }[action]); } catch (reason) { notify(apiError(reason).message, 'error'); } finally { setBusy(''); } };
+  const transition = async (gig, action, body = {}) => { if (!await confirmAction(confirmation[action])) return; setBusy(gig.id); try { const updated = (await gigApi.transition(gig.id, action, body)).data.data.gig; setGigs((current) => current.map((item) => item.id === updated.id ? updated : item)); notify({ publish: 'Gig published.', close: 'Gig closed.', archive: 'Gig moved to Archive.', restore: updated.status==='PUBLISHED'?'Gig restored and active.':'Gig restored as a draft.' }[action]); } catch (reason) { notify(apiError(reason).message, 'error'); } finally { setBusy(''); } };
   const remove = async (gig) => { if (!await confirmAction(confirmation.remove)) return; setBusy(gig.id); try { await gigApi.remove(gig.id); setGigs((current) => current.filter((item) => item.id !== gig.id)); notify('Gig permanently deleted.'); } catch (reason) { notify(apiError(reason).message, 'error'); } finally { setBusy(''); } };
 
   const actions = (gig) => <>
@@ -34,6 +35,7 @@ export function MyGigsPage() {
     {gig.status === 'DRAFT' && <button disabled={busy === gig.id} className={`${actionClass} border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100`} onClick={() => transition(gig, 'publish')}><Rocket size={14}/> Publish</button>}
     {gig.status === 'PUBLISHED' && <button disabled={busy === gig.id} className={`${actionClass} border-amber-200 bg-amber-50 text-amber-700 hover:bg-amber-100`} onClick={() => transition(gig, 'close', { reasonCode: 'OWNER_CLOSED' })}><CircleStop size={14}/> Close</button>}
     {['DRAFT', 'CLOSED', 'CANCELLED', 'COMPLETED'].includes(gig.status) && <button disabled={busy === gig.id} className={`${actionClass} border-slate-200 text-slate-600 hover:bg-slate-100`} onClick={() => transition(gig, 'archive')}><Archive size={14}/> Archive</button>}
+    {gig.status === 'ARCHIVED' && <button disabled={busy === gig.id} className={`${actionClass} border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100`} onClick={() => transition(gig, 'restore')}><RotateCcw size={14}/> Restore active</button>}
     {['DRAFT', 'ARCHIVED'].includes(gig.status) && gig.proposalCount === 0 && gig.acceptedCount === 0 && <button disabled={busy === gig.id} className={`${actionClass} border-rose-200 text-rose-700 hover:bg-rose-50`} onClick={() => remove(gig)}><Trash2 size={14}/> Delete permanently</button>}
   </>;
 

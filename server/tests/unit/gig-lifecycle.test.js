@@ -9,10 +9,12 @@ test('gig lifecycle accepts only documented owner transitions', () => {
   assert.equal(targetGigState('PUBLISHED', 'cancel'), 'CANCELLED');
   assert.equal(targetGigState('ASSIGNED', 'start'), 'ACTIVE');
   assert.equal(targetGigState('COMPLETED', 'archive'), 'ARCHIVED');
+  assert.equal(targetGigState('ARCHIVED', 'restore', 'PUBLISHED'), 'PUBLISHED');
+  assert.equal(targetGigState('ARCHIVED', 'restore'), 'DRAFT');
 });
 
 test('gig lifecycle rejects reverse and invented transitions', () => {
-  for (const [state, action] of [['PUBLISHED','publish'],['ARCHIVED','publish'],['CLOSED','start'],['ACTIVE','publish'],['DRAFT','cancel'],['PUBLISHED','unpublish']]) {
+  for (const [state, action] of [['PUBLISHED','publish'],['PUBLISHED','restore'],['CLOSED','start'],['ACTIVE','publish'],['DRAFT','cancel'],['PUBLISHED','unpublish']]) {
     assert.throws(() => targetGigState(state, action), (error) => error.code === 'INVALID_STATE' && error.status === 409);
   }
 });

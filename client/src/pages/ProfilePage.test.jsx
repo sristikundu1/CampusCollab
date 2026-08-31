@@ -8,12 +8,12 @@ import { ProfilePage } from './ProfilePage.jsx';
 
 const mocks = vi.hoisted(() => ({
   own: vi.fn(), ownPortfolio: vi.fn(), update: vi.fn(), replaceSkills: vi.fn(), updateAvailability: vi.fn(),
-  createPortfolio: vi.fn(), updatePortfolio: vi.fn(), deletePortfolio: vi.fn(), listSkills: vi.fn(),
+  createPortfolio: vi.fn(), updatePortfolio: vi.fn(), deletePortfolio: vi.fn(), listSkills: vi.fn(), createSkill: vi.fn(),
 }));
 
 vi.mock('../services/api.js', () => ({
   profileApi: { own: mocks.own, ownPortfolio: mocks.ownPortfolio, update: mocks.update, replaceSkills: mocks.replaceSkills, updateAvailability: mocks.updateAvailability, createPortfolio: mocks.createPortfolio, updatePortfolio: mocks.updatePortfolio, deletePortfolio: mocks.deletePortfolio },
-  skillApi: { list: mocks.listSkills },
+  skillApi: { list: mocks.listSkills, create: mocks.createSkill },
   apiError: (error) => ({ message: error?.message ?? 'Request failed' }),
 }));
 
@@ -34,6 +34,7 @@ beforeEach(() => {
   mocks.own.mockImplementation(() => response({ profile }));
   mocks.ownPortfolio.mockImplementation(() => response({ items: [] }));
   mocks.listSkills.mockImplementation(() => response({ skills }));
+  mocks.createSkill.mockImplementation((body) => response({ skill: { id: 'ffffffffffffffffffffffff', ...body } }));
   mocks.update.mockImplementation((body) => response({ profile: { ...profile, ...body, version: 2 } }));
   mocks.replaceSkills.mockImplementation((entries) => response({ profile: { ...profile, skills: entries.map((entry) => ({ id: entry.skillId, name: 'React', category: 'Frontend', level: entry.level })), version: 2 } }));
   mocks.updateAvailability.mockImplementation((availability) => response({ profile: { ...profile, availability, version: 2 } }));
@@ -75,6 +76,14 @@ describe('ProfilePage', () => {
     await waitFor(() => expect(mocks.updateAvailability).toHaveBeenCalled());
     expect(mocks.updateAvailability.mock.calls[0][0].status).toBe('LIMITED');
     expect(mocks.updateAvailability.mock.calls[0][0].hoursPerWeek).toBe(8);
+  });
+
+  it('creates and selects a custom profile skill', async () => {
+    const user=userEvent.setup(); renderPage(); await screen.findByText('React');
+    await user.type(screen.getByLabelText('Custom skill name'),'Three.js'); await user.type(screen.getByLabelText('Custom skill category'),'Frontend');
+    await user.click(screen.getByRole('button',{name:'Add'}));
+    await waitFor(()=>expect(mocks.createSkill).toHaveBeenCalledWith({name:'Three.js',category:'Frontend'}));
+    expect(await screen.findByLabelText('Three.js level')).toBeInTheDocument();
   });
 
   it('creates a portfolio project from the empty state', async () => {

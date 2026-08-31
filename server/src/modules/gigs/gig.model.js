@@ -12,12 +12,14 @@ const gigSchema = addVersion(new Schema({
   visibility: { type: String, enum: ['PLATFORM', 'UNIVERSITY'], default: 'PLATFORM', required: true }, universityId: { type: objectId, ref: 'University' }, budget: budgetSchema,
   deadlineAt: Date, capacity: intField({ defaultValue: 1, min: 1, max: 100 }), acceptedCount: intField({ defaultValue: 0 }), proposalCount: intField({ defaultValue: 0 }),
   acceptingProposals: { type: Boolean, default: false, required: true },
+  isActive: { type: Boolean, default: true, required: true },
   status: { type: String, enum: ['DRAFT', 'PUBLISHED', 'ASSIGNED', 'ACTIVE', 'COMPLETION_PENDING', 'COMPLETED', 'CLOSED', 'CANCELLED', 'ARCHIVED'], default: 'DRAFT', required: true },
+  archivedFromStatus: { type: String, enum: ['DRAFT', 'PUBLISHED', 'COMPLETED', 'CLOSED', 'CANCELLED'] },
   materialRevision: intField({ defaultValue: 0 }), moderationStatus: { type: String, enum: ['VISIBLE', 'RESTRICTED', 'HIDDEN'], default: 'VISIBLE', required: true },
   publishedAt: Date, assignedAt: Date, startedAt: Date, completionRequestedAt: Date, completedAt: Date, closedAt: Date, cancelledAt: Date, archivedAt: Date,
   statusReasonCode: textField({ max: 80, select: false }),
 }, mutableSchemaOptions));
-gigSchema.index({ status: 1, moderationStatus: 1, visibility: 1, createdAt: -1, _id: -1 }, { partialFilterExpression: { status: 'PUBLISHED', moderationStatus: 'VISIBLE' }, name: 'ix_gigs_published_visible_feed' });
+gigSchema.index({ status: 1, isActive: 1, moderationStatus: 1, visibility: 1, createdAt: -1, _id: -1 }, { partialFilterExpression: { status: 'PUBLISHED', moderationStatus: 'VISIBLE' }, name: 'ix_gigs_published_visible_feed' });
 gigSchema.index({ ownerId: 1, status: 1, createdAt: -1, _id: -1 }, { name: 'ix_gigs_owner_status_cursor' });
 gigSchema.index({ status: 1, category: 1, createdAt: -1, _id: -1 }, { name: 'ix_gigs_category_feed' });
 gigSchema.index({ status: 1, 'skillRequirements.skillId': 1, createdAt: -1, _id: -1 }, { name: 'ix_gigs_skill_feed' });
