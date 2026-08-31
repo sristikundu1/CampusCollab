@@ -1,5 +1,5 @@
 import { AlertCircle, Plus, Search, SlidersHorizontal } from 'lucide-react';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { GigCard } from '../components/gigs/GigCard.jsx';
 import { MarketplaceLayout } from '../components/gigs/MarketplaceLayout.jsx';
@@ -11,7 +11,8 @@ import { showLoginRequired } from '../lib/confirm-action.js';
 function CardsSkeleton(){return <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">{[1,2,3,4,5,6].map((item)=><div key={item} className="h-80 animate-pulse rounded-2xl bg-slate-200"/>)}</div>}
 export function GigsPage(){
   const {isAuthenticated}=useAuth();const {notify}=useToast();const navigate=useNavigate();const [gigs,setGigs]=useState([]);const [skills,setSkills]=useState([]);const [loading,setLoading]=useState(true);const [loadingMore,setLoadingMore]=useState(false);const [error,setError]=useState('');const [pagination,setPagination]=useState({});const [filters,setFilters]=useState({q:'',skillId:'',category:'',workMode:'',sort:'NEWEST'});const [applied,setApplied]=useState(filters);const [busy,setBusy]=useState('');
-  const load=useCallback(async(cursor,append=false)=>{append?setLoadingMore(true):setLoading(true);setError('');try{const activeFilters=Object.fromEntries(Object.entries(applied).filter(([,value])=>value));const response=await gigApi.list({...activeFilters,...(cursor?{cursor}:{})});const next=response.data.data.gigs;setGigs((current)=>append?[...current,...next.filter((gig)=>!current.some((item)=>item.id===gig.id))]:next);setPagination(response.data.meta.pagination)}catch(reason){setError(apiError(reason).message)}finally{setLoading(false);setLoadingMore(false)}},[applied]);
+  const requestSequence=useRef(0);
+  const load=useCallback(async(cursor,append=false)=>{const requestId=++requestSequence.current;append?setLoadingMore(true):setLoading(true);setError('');try{const activeFilters=Object.fromEntries(Object.entries(applied).filter(([,value])=>value));const response=await gigApi.list({...activeFilters,...(cursor?{cursor}:{})});if(requestId!==requestSequence.current)return;const next=response.data.data.gigs;setGigs((current)=>append?[...current,...next.filter((gig)=>!current.some((item)=>item.id===gig.id))]:next);setPagination(response.data.meta.pagination)}catch(reason){if(requestId===requestSequence.current)setError(apiError(reason).message)}finally{if(requestId===requestSequence.current){setLoading(false);setLoadingMore(false)}}},[applied]);
   useEffect(()=>{void skillApi.list().then((response)=>setSkills(response.data.data.skills));},[]);useEffect(()=>{void load()},[load]);
   const submit=(event)=>{event.preventDefault();setApplied({...filters})};
   const bookmark=async(gig)=>{if(!isAuthenticated){await showLoginRequired();navigate('/login',{state:{from:{pathname:'/gigs'}}});return}setBusy(gig.id);try{gig.isBookmarked?await gigApi.removeBookmark(gig.id):await gigApi.bookmark(gig.id);setGigs((current)=>current.map((item)=>item.id===gig.id?{...item,isBookmarked:!item.isBookmarked}:item));notify(gig.isBookmarked?'Removed from favourites.':'Saved to favourites.')}catch(reason){notify(apiError(reason).message,'error')}finally{setBusy('')}};

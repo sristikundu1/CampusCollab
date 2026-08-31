@@ -10,6 +10,7 @@ import { targetGigState } from './gig-lifecycle.js';
 
 const editFields = ['title', 'description', 'category', 'skillRequirements', 'workMode', 'locationText', 'visibility', 'budget', 'deadlineAt', 'capacity'];
 const dateValue = (value) => value ? new Date(value) : undefined;
+const escapeRegex = (value) => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
 export function createGigService({ config, GigModel = Gig, BookmarkModel = Bookmark, ProfileModel = Profile, SkillModel = Skill, AffiliationModel = UniversityAffiliation, UniversityModel = University } = {}) {
   const cursorCodec = createCursorCodec(config.csrfSecret);
@@ -73,7 +74,7 @@ export function createGigService({ config, GigModel = Gig, BookmarkModel = Bookm
     const scope = `gigs:${input.sort}:${input.q ?? ''}:${input.skillId ?? ''}:${input.category ?? ''}:${input.workMode ?? ''}`;
     const field = input.sort === 'DEADLINE' ? 'deadlineAt' : 'createdAt'; const direction = input.sort === 'DEADLINE' ? 'asc' : 'desc';
     const filter = { $and: [visibleFilter(viewerAffiliation), cursorFilter(input.cursor, scope, field, direction)] };
-    if (input.q) filter.$text = { $search: input.q }; if (input.skillId) filter['skillRequirements.skillId'] = input.skillId; if (input.category) filter.category = input.category; if (input.workMode) filter.workMode = input.workMode;
+    if (input.q) filter.$text = { $search: input.q }; if (input.skillId) filter['skillRequirements.skillId'] = input.skillId; if (input.category) filter.category = { $regex: escapeRegex(input.category), $options: 'i' }; if (input.workMode) filter.workMode = input.workMode;
     if (input.sort === 'DEADLINE') filter.deadlineAt = { $gt: new Date() };
     const found = await GigModel.find(filter).sort({ [field]: direction === 'asc' ? 1 : -1, _id: direction === 'asc' ? 1 : -1 }).limit(input.limit + 1).lean();
     const result = page(found, input.limit, scope, field); return { gigs: await enrich(result.values, viewerId), nextCursor: result.nextCursor, hasMore: result.hasMore };

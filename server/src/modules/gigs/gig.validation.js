@@ -20,7 +20,7 @@ const gigFields = {
 const createBody = z.object(gigFields).strict();
 const updateBody = z.object(Object.fromEntries(Object.entries(gigFields).map(([key, schema]) => [key, schema.optional()]))).strict().refine((value) => Object.keys(value).length > 0, 'At least one editable field is required');
 const listQuery = z.object({
-  q: z.string().trim().min(2).max(80).optional(), skillId: objectId.optional(), category: z.string().trim().min(1).max(80).optional(),
+  q: z.string().trim().min(1).max(80).optional(), skillId: objectId.optional(), category: z.string().trim().min(1).max(80).optional(),
   workMode: z.enum(['REMOTE', 'HYBRID', 'ONSITE']).optional(), sort: z.enum(['NEWEST', 'DEADLINE']).default('NEWEST'),
   cursor: z.string().max(1024).optional(), limit: z.coerce.number().int().min(1).max(50).default(12),
 }).strict();
