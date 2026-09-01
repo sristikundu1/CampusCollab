@@ -1,8 +1,8 @@
 openapi: 3.1.0
 info:
   title: CampusCollab API
-  version: 0.3.0
-  description: Implemented CampusCollab foundation, authentication, profiles, and Gigs Marketplace contract.
+  version: 0.4.0
+  description: Implemented CampusCollab foundation, authentication, profiles, Gigs Marketplace, and Proposal workflow contract.
 servers:
   - url: http://localhost:5000
 paths:
@@ -37,7 +37,7 @@ paths:
     get:
       summary: Discover published visible gigs
       parameters:
-        - { in: query, name: q, schema: { type: string, minLength: 2, maxLength: 80 } }
+        - { in: query, name: q, schema: { type: string, minLength: 1, maxLength: 80 } }
         - { in: query, name: skillId, schema: { type: string, pattern: '^[a-fA-F0-9]{24}$' } }
         - { in: query, name: category, schema: { type: string, maxLength: 80 } }
         - { in: query, name: workMode, schema: { type: string, enum: [REMOTE, HYBRID, ONSITE] } }
@@ -104,6 +104,8 @@ paths:
     post: { summary: Archive an eligible owned gig, security: [{ sessionCookie: [], csrfToken: [] }], parameters: [{ $ref: '#/components/parameters/GigId' }], responses: { '200': { description: Archived }, '409': { description: Invalid state } } }
   /api/v1/gigs/{gigId}:start:
     post: { summary: Start an assigned owned gig, security: [{ sessionCookie: [], csrfToken: [] }], parameters: [{ $ref: '#/components/parameters/GigId' }], responses: { '200': { description: Active }, '409': { description: Invalid state } } }
+  /api/v1/gigs/{gigId}:restore:
+    post: { summary: Restore an owned archived gig, security: [{ sessionCookie: [], csrfToken: [] }], parameters: [{ $ref: '#/components/parameters/GigId' }], responses: { '200': { description: Restored as a published gig or draft }, '409': { description: Invalid state } } }
   /api/v1/gigs/{gigId}/bookmark:
     parameters: [{ $ref: '#/components/parameters/GigId' }]
     post: { summary: Bookmark a visible gig idempotently, security: [{ sessionCookie: [], csrfToken: [] }], responses: { '200': { description: Existing bookmark }, '201': { description: Bookmark created }, '404': { description: Gig not visible } } }
@@ -116,16 +118,64 @@ paths:
         - { in: query, name: cursor, schema: { type: string } }
         - { in: query, name: limit, schema: { type: integer, minimum: 1, maximum: 50 } }
       responses: { '200': { description: Cursor-paginated bookmarked gigs } }
+  /api/v1/gigs/{gigId}/proposals:
+    parameters: [{ $ref: '#/components/parameters/GigId' }]
+    post:
+      summary: Submit one active proposal as the authenticated eligible student
+      security: [{ sessionCookie: [], csrfToken: [], idempotencyKey: [] }]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/ProposalRevisionWrite' } } } }
+      responses: { '201': { description: Proposal submitted }, '404': { description: Gig unavailable or concealed }, '409': { description: Duplicate, incomplete profile, invalid gig state, deadline, or capacity conflict }, '422': { $ref: '#/components/responses/ValidationError' } }
+    get:
+      summary: List proposals for an owned gig
+      security: [{ sessionCookie: [] }]
+      parameters: [{ in: query, name: status, schema: { $ref: '#/components/schemas/ProposalStatus' } }, { $ref: '#/components/parameters/Cursor' }, { $ref: '#/components/parameters/Limit' }]
+      responses: { '200': { description: Visibility-safe owner proposal review list }, '404': { description: Missing or non-owned gig } }
+  /api/v1/proposals/mine:
+    get:
+      summary: List proposals submitted by the authenticated student
+      security: [{ sessionCookie: [] }]
+      parameters: [{ in: query, name: status, schema: { $ref: '#/components/schemas/ProposalStatus' } }, { in: query, name: gigId, schema: { type: string, pattern: '^[a-fA-F0-9]{24}$' } }, { $ref: '#/components/parameters/Cursor' }, { $ref: '#/components/parameters/Limit' }]
+      responses: { '200': { description: Cursor-paginated own proposals } }
+  /api/v1/proposals/{proposalId}:
+    parameters: [{ $ref: '#/components/parameters/ProposalId' }]
+    get: { summary: Get an own or owned-gig proposal, security: [{ sessionCookie: [] }], responses: { '200': { description: Role-safe proposal detail with revisions }, '404': { description: Missing or concealed proposal } } }
+    patch:
+      summary: Append a revision to an active own proposal
+      security: [{ sessionCookie: [], csrfToken: [], idempotencyKey: [] }]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/ProposalRevisionWrite' } } } }
+      responses: { '200': { description: Revision appended }, '404': { description: Missing or non-owned proposal }, '409': { description: Invalid state, revision limit, or concurrent modification } }
+  /api/v1/proposals/{proposalId}:withdraw:
+    post: { summary: Withdraw an active own proposal, security: [{ sessionCookie: [], csrfToken: [], idempotencyKey: [] }], parameters: [{ $ref: '#/components/parameters/ProposalId' }], responses: { '200': { description: Withdrawn idempotently }, '404': { description: Missing or non-owned proposal }, '409': { description: Invalid state } } }
+  /api/v1/proposals/{proposalId}:shortlist:
+    post: { summary: Shortlist a submitted proposal as gig owner, security: [{ sessionCookie: [], csrfToken: [], idempotencyKey: [] }], parameters: [{ $ref: '#/components/parameters/ProposalId' }], responses: { '200': { description: Shortlisted }, '404': { description: Missing or non-owned gig proposal }, '409': { description: Invalid state or concurrent modification } } }
+  /api/v1/proposals/{proposalId}:accept:
+    post: { summary: Atomically accept a proposal within gig capacity, security: [{ sessionCookie: [], csrfToken: [], idempotencyKey: [] }], parameters: [{ $ref: '#/components/parameters/ProposalId' }], responses: { '200': { description: Accepted and gig capacity updated }, '404': { description: Missing or non-owned gig proposal }, '409': { description: Invalid state, eligibility, capacity, or concurrent modification } } }
+  /api/v1/proposals/{proposalId}:reject:
+    post: { summary: Reject an active proposal as gig owner, security: [{ sessionCookie: [], csrfToken: [], idempotencyKey: [] }], parameters: [{ $ref: '#/components/parameters/ProposalId' }], responses: { '200': { description: Rejected }, '404': { description: Missing or non-owned gig proposal }, '409': { description: Invalid state or concurrent modification } } }
 components:
   securitySchemes:
     sessionCookie: { type: apiKey, in: cookie, name: campuscollab_session }
     csrfToken: { type: apiKey, in: header, name: X-CSRF-Token }
+    idempotencyKey: { type: apiKey, in: header, name: Idempotency-Key }
   parameters:
     GigId: { in: path, name: gigId, required: true, schema: { type: string, pattern: '^[a-fA-F0-9]{24}$' } }
+    ProposalId: { in: path, name: proposalId, required: true, schema: { type: string, pattern: '^[a-fA-F0-9]{24}$' } }
+    Cursor: { in: query, name: cursor, schema: { type: string, maxLength: 1024 } }
+    Limit: { in: query, name: limit, schema: { type: integer, minimum: 1, maximum: 50, default: 12 } }
   responses:
     ValidationError: { description: Strict request validation failed }
   schemas:
     GigStatus: { type: string, enum: [DRAFT, PUBLISHED, ASSIGNED, ACTIVE, COMPLETION_PENDING, COMPLETED, CLOSED, CANCELLED, ARCHIVED] }
+    ProposalStatus: { type: string, enum: [SUBMITTED, SHORTLISTED, ACCEPTED, REJECTED, WITHDRAWN, CLOSED] }
+    ProposalRevisionWrite:
+      type: object
+      additionalProperties: false
+      required: [coverMessage]
+      properties:
+        coverMessage: { type: string, minLength: 20, maxLength: 5000 }
+        proposedBudget: { type: object, additionalProperties: false, required: [type], properties: { type: { type: string, enum: [FIXED, RANGE, UNPAID] }, minMinor: { type: integer, minimum: 0 }, maxMinor: { type: integer, minimum: 0 }, currency: { type: string, minLength: 3, maxLength: 3 } } }
+        proposedDuration: { type: string, maxLength: 120 }
+        availability: { type: string, maxLength: 300 }
     SkillRequirement:
       type: object
       additionalProperties: false

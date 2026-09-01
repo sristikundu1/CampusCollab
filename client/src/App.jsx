@@ -8,6 +8,9 @@ import { GigsPage } from './pages/GigsPage.jsx';
 import { HomePage } from './pages/HomePage.jsx';
 import { LoginPage } from './pages/LoginPage.jsx';
 import { MyGigsPage } from './pages/MyGigsPage.jsx';
+import { MyProposalsPage } from './pages/MyProposalsPage.jsx';
+import { ProposalDetailsPage } from './pages/ProposalDetailsPage.jsx';
+import { GigProposalsPage } from './pages/GigProposalsPage.jsx';
 import { NotFoundPage } from './pages/NotFoundPage.jsx';
 import { ProfilePage } from './pages/ProfilePage.jsx';
 import { PublicProfilePage } from './pages/PublicProfilePage.jsx';
@@ -23,7 +26,7 @@ export function App() {
     <Route path="/gigs" element={<GigsPage/>}/>
     <Route element={<LoginRequiredRoute/>}><Route path="/gigs/:gigId" element={<GigDetailsPage/>}/></Route>
     <Route element={<PublicOnlyRoute/>}><Route path="/login" element={<LoginPage/>}/><Route path="/register" element={<RegisterPage/>}/><Route path="/verify-email" element={<VerifyEmailPage/>}/><Route path="/forgot-password" element={<ForgotPasswordPage/>}/><Route path="/reset-password" element={<ResetPasswordPage/>}/></Route>
-    <Route element={<ProtectedRoute/>}><Route path="/dashboard" element={<DashboardPage/>}/><Route path="/profile" element={<ProfilePage/>}/><Route path="/gigs/new" element={<GigFormPage/>}/><Route path="/gigs/:gigId/edit" element={<GigFormPage/>}/><Route path="/my-gigs" element={<MyGigsPage/>}/><Route path="/bookmarks" element={<BookmarksPage/>}/></Route>
+    <Route element={<ProtectedRoute/>}><Route path="/dashboard" element={<DashboardPage/>}/><Route path="/profile" element={<ProfilePage/>}/><Route path="/gigs/new" element={<GigFormPage/>}/><Route path="/gigs/:gigId/edit" element={<GigFormPage/>}/><Route path="/my-gigs" element={<MyGigsPage/>}/><Route path="/my-gigs/:gigId/proposals" element={<GigProposalsPage/>}/><Route path="/proposals" element={<MyProposalsPage/>}/><Route path="/proposals/:proposalId" element={<ProposalDetailsPage/>}/><Route path="/bookmarks" element={<BookmarksPage/>}/></Route>
     <Route path="*" element={<NotFoundPage/>}/>
   </Routes>;
 }

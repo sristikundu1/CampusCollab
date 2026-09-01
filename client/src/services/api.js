@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-export const api = axios.create({ baseURL: import.meta.env.VITE_API_URL || 'http://localhost:5000/api/v1', withCredentials: true, headers: { Accept: 'application/json' }, timeout: 5_000 });
+export const api = axios.create({ baseURL: import.meta.env.VITE_API_URL || 'http://localhost:5000/api/v1', withCredentials: true, headers: { Accept: 'application/json' }, timeout: 15_000 });
 
 let csrfToken = null;
 export function setCsrfToken(value) { csrfToken = value || null; }
@@ -47,4 +47,17 @@ export const gigApi = {
   bookmark: (gigId) => api.post(`/gigs/${gigId}/bookmark`),
   removeBookmark: (gigId) => api.delete(`/gigs/${gigId}/bookmark`),
   bookmarks: (params = {}) => api.get('/users/me/bookmarked-gigs', { params }),
+};
+
+const idempotent = () => ({ headers: { 'Idempotency-Key': crypto.randomUUID() } });
+export const proposalApi = {
+  submit: (gigId, body) => api.post(`/gigs/${gigId}/proposals`, body, idempotent()),
+  mine: (params = {}) => api.get('/proposals/mine', { params }),
+  get: (proposalId) => api.get(`/proposals/${proposalId}`),
+  update: (proposalId, body) => api.patch(`/proposals/${proposalId}`, body, idempotent()),
+  withdraw: (proposalId, body = {}) => api.post(`/proposals/${proposalId}:withdraw`, body, idempotent()),
+  forGig: (gigId, params = {}) => api.get(`/gigs/${gigId}/proposals`, { params }),
+  shortlist: (proposalId, body = {}) => api.post(`/proposals/${proposalId}:shortlist`, body, idempotent()),
+  accept: (proposalId, body = {}) => api.post(`/proposals/${proposalId}:accept`, body, idempotent()),
+  reject: (proposalId, body = {}) => api.post(`/proposals/${proposalId}:reject`, body, idempotent()),
 };

@@ -7,12 +7,13 @@ import { University } from '../university/university.model.js';
 import { Bookmark } from './bookmark.model.js';
 import { Gig } from './gig.model.js';
 import { targetGigState } from './gig-lifecycle.js';
+import { Proposal } from '../proposals/proposal.model.js';
 
 const editFields = ['title', 'description', 'category', 'skillRequirements', 'workMode', 'locationText', 'visibility', 'budget', 'deadlineAt', 'capacity'];
 const dateValue = (value) => value ? new Date(value) : undefined;
 const escapeRegex = (value) => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
-export function createGigService({ config, GigModel = Gig, BookmarkModel = Bookmark, ProfileModel = Profile, SkillModel = Skill, AffiliationModel = UniversityAffiliation, UniversityModel = University } = {}) {
+export function createGigService({ config, GigModel = Gig, BookmarkModel = Bookmark, ProfileModel = Profile, SkillModel = Skill, AffiliationModel = UniversityAffiliation, UniversityModel = University, ProposalModel = Proposal } = {}) {
   const cursorCodec = createCursorCodec(config.csrfSecret);
   async function affiliation(userId) { return AffiliationModel.findOne({ userId, isActive: true }).lean(); }
   async function activeSkills(ids) {
@@ -112,7 +113,9 @@ export function createGigService({ config, GigModel = Gig, BookmarkModel = Bookm
     else if (action === 'restore') { gig.acceptingProposals = target === 'PUBLISHED'; gig.isActive = true; gig.archivedAt = undefined; gig.archivedFromStatus = undefined; if (target === 'PUBLISHED') gig.closedAt = undefined; }
     else if (action === 'start') gig.startedAt = now;
     gig.status = target;
-    gig.version += 1; await gig.save(); return (await enrich([gig.toObject()], userId, true))[0];
+    gig.version += 1; await gig.save();
+    if (['close', 'cancel', 'archive'].includes(action)) await ProposalModel.updateMany({ gigId: gig._id, status: { $in: ['SUBMITTED', 'SHORTLISTED'] } }, { $set: { status: 'CLOSED', closedAt: now, decisionReasonCode: `GIG_${action.toUpperCase()}` }, $inc: { version: 1 } });
+    return (await enrich([gig.toObject()], userId, true))[0];
   }
   async function addBookmark(userId, gigId) {
     const gig = await get(gigId, userId); if (gig.status !== 'PUBLISHED') throw new NotFoundError();

@@ -1,4 +1,4 @@
-import { AlertCircle, Archive, CircleStop, Eye, Pencil, Plus, Rocket, RotateCcw, Trash2 } from 'lucide-react';
+import { AlertCircle, Archive, CircleStop, Eye, FileText, Pencil, Plus, Rocket, RotateCcw, Trash2 } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { GigCard } from '../components/gigs/GigCard.jsx';
@@ -34,6 +34,7 @@ export function MyGigsPage() {
   const remove = async (gig) => { if (!await confirmAction(confirmation.remove)) return; setBusy(gig.id); try { await gigApi.remove(gig.id); setGigs((current) => current.filter((item) => item.id !== gig.id)); notify('Gig permanently deleted.'); } catch (reason) { notify(apiError(reason).message, 'error'); } finally { setBusy(''); } };
 
   const actions = (gig) => <>
+    {gig.proposalCount > 0 && <Link className={`${actionClass} border-brand-200 bg-brand-50 text-brand-700 hover:bg-brand-100`} to={`/my-gigs/${gig.id}/proposals`}><FileText size={14}/> Proposals ({gig.proposalCount})</Link>}
     {['DRAFT', 'PUBLISHED'].includes(gig.status) && <Link className={`${actionClass} border-slate-200 text-slate-600 hover:bg-slate-50`} to={`/gigs/${gig.id}/edit`}><Pencil size={14}/> Edit</Link>}
     {gig.status === 'DRAFT' && <button disabled={busy === gig.id} className={`${actionClass} border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100`} onClick={() => transition(gig, 'publish')}><Rocket size={14}/> Publish</button>}
     {gig.status === 'PUBLISHED' && <button disabled={busy === gig.id} className={`${actionClass} border-amber-200 bg-amber-50 text-amber-700 hover:bg-amber-100`} onClick={() => transition(gig, 'close', { reasonCode: 'OWNER_CLOSED' })}><CircleStop size={14}/> Close</button>}
