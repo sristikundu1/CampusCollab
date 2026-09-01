@@ -22,7 +22,6 @@ export function createAuthRouter(dependencies) {
       limit,
       standardHeaders: "draft-8",
       legacyHeaders: false,
-      store: dependencies.rateLimitStoreFor?.(`auth:${name}`),
       handler: (_req, _res, next) => next(new RateLimitError()),
     });
   router.post(

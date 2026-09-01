@@ -8,7 +8,6 @@ import {
   safeConfigurationSummary,
 } from "../src/config/env.js";
 import { createLogger } from "../src/config/logger.js";
-import { initializeRateLimiting } from "../src/lib/rate-limit/redis-store.js";
 import "../src/models.js";
 
 let applicationPromise;
@@ -24,12 +23,10 @@ async function initializeApplication() {
     "Configuration loaded",
   );
   await connectDatabase(config, logger);
-  const rateLimiting = await initializeRateLimiting(config, logger);
   return createApp({
     config,
     logger,
     databaseReadiness: getDatabaseReadiness,
-    rateLimitStoreFor: rateLimiting.storeFor,
   });
 }
 

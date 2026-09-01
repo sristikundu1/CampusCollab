@@ -93,7 +93,7 @@ src/
       __tests__/
   lib/
     mongo/                        # Transaction/session helpers; no domain decisions
-    redis/                        # Client and distributed coordination adapters
+    coordination/                 # Deferred multi-instance coordination adapters
     email/                        # Provider-neutral delivery adapter
     storage/                      # Signed upload/delivery/delete adapter
     crypto/                       # Token hashing and constant-time helpers
@@ -514,7 +514,7 @@ The canonical backend template is `C:\CampusColab\server\.env.example`; the manu
 | Database | `MONGODB_URI` | Required secret |
 | Session/CSRF | `SESSION_SECRET`, `CSRF_SECRET`, `SESSION_COOKIE_NAME`, `SESSION_TTL_DAYS` | Secrets plus public behavior values; required |
 | Email | `SMTP_HOST`, `SMTP_PORT`, `SMTP_SECURE`, `SMTP_USER`, `SMTP_PASSWORD`, `EMAIL_FROM` | Required for verification/recovery; credentials secret |
-| Redis | `REDIS_URL` | Optional single-process local; required scaled production |
+| Distributed coordination | Deferred | The current MVP uses per-instance in-memory rate limits; evaluate a shared store only when horizontally scaling. |
 | Storage | `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`, `CLOUDINARY_API_SECRET`, `CLOUDINARY_FOLDER`, `MAX_UPLOAD_BYTES` | Required when attachment/upload endpoints enabled |
 
 JWT variables are intentionally absent. Browser authentication uses a random opaque token in a `Secure`, `HttpOnly`, appropriately `SameSite` cookie; only a hash/derived lookup value is stored server-side. State-changing requests also require CSRF proof. CORS never substitutes for CSRF or authorization.

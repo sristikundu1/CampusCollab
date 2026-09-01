@@ -28,7 +28,6 @@ export function createParticipationRouter(dependencies) {
     limit: 50,
     standardHeaders: "draft-8",
     legacyHeaders: false,
-    store: dependencies.rateLimitStoreFor?.("participation:write"),
     keyGenerator: (req) => String(req.auth.user._id),
   });
   r.post(

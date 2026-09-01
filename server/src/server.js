@@ -7,7 +7,6 @@ import {
 } from "./config/database.js";
 import { parseEnvironment, safeConfigurationSummary } from "./config/env.js";
 import { createLogger } from "./config/logger.js";
-import { initializeRateLimiting } from "./lib/rate-limit/redis-store.js";
 import "./models.js";
 
 let shuttingDown = false;
@@ -44,24 +43,10 @@ async function start() {
     return;
   }
 
-  let rateLimiting;
-  try {
-    rateLimiting = await initializeRateLimiting(config, logger);
-  } catch (error) {
-    logger.fatal(
-      { errorType: error?.name },
-      "Redis rate-limit store initialization failed",
-    );
-    await disconnectDatabase(logger);
-    process.exitCode = 1;
-    return;
-  }
-
   const app = createApp({
     config,
     logger,
     databaseReadiness: getDatabaseReadiness,
-    rateLimitStoreFor: rateLimiting.storeFor,
   });
   const server = http.createServer(app);
   server.requestTimeout = 30_000;
@@ -78,7 +63,7 @@ async function start() {
     }, 15_000).unref();
     server.close(async (serverError) => {
       try {
-        await Promise.all([disconnectDatabase(logger), rateLimiting.close()]);
+        await disconnectDatabase(logger);
         clearTimeout(forceTimer);
         process.exit(serverError ? 1 : 0);
       } catch (error) {

@@ -45,7 +45,6 @@ Store these in local `.env`, a CI secret store, and the production platform's se
 | `SMTP_HOST` | SMTP endpoint; sometimes operational rather than secret, but keep with provider configuration. | Chosen provider dashboard/documentation. | Yes | Avoid committing provider configuration | Local development may use a mail sandbox; production uses an approved provider. |
 | `SMTP_USER` | SMTP username/account identifier. | Email provider. | Yes | **Never** | Use environment-specific credentials and least privilege. |
 | `SMTP_PASSWORD` | SMTP password or provider-issued SMTP API key. | Email provider; never use a personal mailbox password when provider credentials are available. | Yes | **Never** | Rotate and revoke through provider tools. |
-| `REDIS_URL` | Redis connection URI, usually containing credentials, for distributed rate limiting, jobs, caching, and later Socket.IO fan-out. | Provision Redis through a managed provider or local Redis and copy its URI. | Yes when enabled | **Never** | Optional for a single-process local backend; required before multi-instance production. Use TLS (`rediss://`) where supported. |
 | `CLOUDINARY_API_KEY` | Cloudinary API account identifier used by the backend. | Cloudinary dashboard. | Yes | **Never** as a project rule | Server-side only. Use restricted/environment-specific credentials. |
 | `CLOUDINARY_API_SECRET` | Secret authorizing Cloudinary signing and management calls. | Cloudinary dashboard. | Yes | **Never** | Never expose to React. Rotate immediately if leaked. |
 
@@ -83,7 +82,7 @@ File uploads are not implemented in the current application. Do not provision Cl
 
 ### 2.5 Redis
 
-Redis is optional for a single-process local implementation. It is mandatory when `NODE_ENV=production` because authentication, proposal, participation, and global rate limits must share state across instances. Local development can use the in-memory fallback; production should use an authenticated TLS `rediss://` connection and separate environments.
+Redis is not used by the current MVP. Request throttling uses the in-memory store provided by `express-rate-limit`, so no Redis account or `REDIS_URL` is required. If the backend is later scaled across multiple instances, replace this with a shared rate-limit store at that time.
 
 ### 2.6 Application URLs
 

@@ -22,7 +22,6 @@ export function createProposalRouter(dependencies) {
     limit: 30,
     standardHeaders: "draft-8",
     legacyHeaders: false,
-    store: dependencies.rateLimitStoreFor?.("proposal:submit"),
     keyGenerator: (request) => String(request.auth.user._id),
   });
   router.post(

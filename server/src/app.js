@@ -25,7 +25,6 @@ export function createApp({
   config,
   logger,
   databaseReadiness,
-  rateLimitStoreFor = () => undefined,
   authService: authServiceOverride,
   emailService: emailServiceOverride,
   profileService: profileServiceOverride,
@@ -78,7 +77,6 @@ export function createApp({
       limit: 1_000,
       standardHeaders: "draft-8",
       legacyHeaders: false,
-      store: rateLimitStoreFor("global"),
       skip: (request) =>
         request.path.startsWith("/health") || request.path === "/ready",
       handler: (_request, _response, next) => next(new RateLimitError()),
@@ -113,7 +111,6 @@ export function createApp({
     "/api/v1",
     createV1Router({
       config,
-      rateLimitStoreFor,
       authService,
       profileService,
       skillService,

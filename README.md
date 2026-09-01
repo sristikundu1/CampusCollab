@@ -32,7 +32,7 @@ npm test
 npm run build
 ```
 
-Production deployments also require `REDIS_URL` so rate limits are shared across application instances. MongoDB, session, CSRF, Redis, and other secret values belong only in the deployment platform's encrypted environment configuration.
+MongoDB, session, CSRF, and other secret values belong only in the deployment platform's encrypted environment configuration. The current MVP uses in-memory request rate limits and does not require Redis.
 
 ## Deployment
 

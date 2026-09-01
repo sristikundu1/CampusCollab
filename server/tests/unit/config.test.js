@@ -77,7 +77,7 @@ test("optional email placeholders do not block local development", () => {
   assert.equal(config.smtp, null);
 });
 
-test("production configuration requires HTTPS origins and a distributed rate-limit store", () => {
+test("production configuration requires HTTPS origins", () => {
   assert.throws(
     () => parseEnvironment({ ...valid, NODE_ENV: "production" }),
     ConfigurationError,
@@ -89,7 +89,6 @@ test("production configuration requires HTTPS origins and a distributed rate-lim
       CLIENT_URL: "https://app.example.com",
       API_URL: "https://api.example.com",
       REQUIRE_EMAIL_VERIFICATION: "false",
-      REDIS_URL: "rediss://example.invalid:6380",
     }),
   );
   assert.throws(
@@ -100,7 +99,6 @@ test("production configuration requires HTTPS origins and a distributed rate-lim
         CLIENT_URL: "https://app.example.com",
         API_URL: "https://api.example.com",
         REQUIRE_EMAIL_VERIFICATION: "true",
-        REDIS_URL: "rediss://example.invalid:6380",
       }),
     ConfigurationError,
   );

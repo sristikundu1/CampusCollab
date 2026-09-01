@@ -12,14 +12,6 @@ const optionalFutureSecret = z
     value && !PLACEHOLDER_PATTERN.test(value) ? value : undefined,
   );
 
-const optionalRedisUrl = optionalFutureSecret.refine(
-  (value) =>
-    value === undefined ||
-    value.startsWith("redis://") ||
-    value.startsWith("rediss://"),
-  "REDIS_URL must use redis:// or rediss://",
-);
-
 const optionalFutureEmail = z
   .string()
   .trim()
@@ -105,7 +97,6 @@ const environmentSchema = z
         (value) => !PLACEHOLDER_PATTERN.test(value),
         "CSRF_SECRET still contains a placeholder",
       ),
-    REDIS_URL: optionalRedisUrl,
     SESSION_COOKIE_NAME: z
       .string()
       .trim()
@@ -153,14 +144,6 @@ const environmentSchema = z
             });
         }
       }
-      if (!value.REDIS_URL) {
-        context.addIssue({
-          code: "custom",
-          path: ["REDIS_URL"],
-          message:
-            "REDIS_URL is required in production for distributed rate limiting",
-        });
-      }
     }
   });
 
@@ -191,7 +174,6 @@ export function parseEnvironment(source = process.env) {
     trustProxy: result.data.TRUST_PROXY,
     sessionSecret: result.data.SESSION_SECRET,
     csrfSecret: result.data.CSRF_SECRET,
-    redisUrl: result.data.REDIS_URL,
     sessionCookieName: result.data.SESSION_COOKIE_NAME,
     sessionTtlDays: result.data.SESSION_TTL_DAYS,
     requireEmailVerification: result.data.REQUIRE_EMAIL_VERIFICATION,
@@ -225,6 +207,5 @@ export function safeConfigurationSummary(config) {
     mongodbDatabase: config.mongodbDbName,
     mongodbDnsOverrideConfigured: config.mongodbDnsServers.length > 0,
     emailVerificationRequired: config.requireEmailVerification,
-    distributedRateLimitingConfigured: Boolean(config.redisUrl),
   };
 }
