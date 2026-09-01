@@ -99,7 +99,7 @@ export function GigProposalsPage() {
       <div>
         <Link
           className="inline-flex items-center gap-2 text-sm font-bold text-brand-700"
-          to="/my-gigs"
+          to="/dashboard/gigs"
         >
           <ArrowLeft size={16} />
           Back to My Gigs
@@ -154,7 +154,7 @@ export function GigProposalsPage() {
                   <div className="flex shrink-0 flex-wrap gap-2">
                     <Link
                       className="btn-secondary !px-4 !py-2"
-                      to={`/proposals/${proposal.id}`}
+                      to={`/dashboard/proposals/${proposal.id}`}
                     >
                       Review
                     </Link>

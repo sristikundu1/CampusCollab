@@ -90,7 +90,7 @@ export function MyProposalsPage() {
             {proposals.map((proposal) => (
               <Link
                 key={proposal.id}
-                to={`/proposals/${proposal.id}`}
+                to={`/dashboard/proposals/${proposal.id}`}
                 className="surface group flex flex-col justify-between gap-5 p-5 transition hover:-translate-y-0.5 hover:border-brand-300 sm:flex-row sm:items-center"
               >
                 <div>

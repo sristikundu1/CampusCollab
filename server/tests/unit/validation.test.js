@@ -14,6 +14,7 @@ import {
   joinListRequest,
 } from "../../src/modules/participation/participation.validation.js";
 import { createProfileService } from "../../src/modules/profiles/profile.service.js";
+import { listMineRequest } from "../../src/modules/gigs/gig.validation.js";
 
 test("validation middleware parses params, query, and body into request.validated", () => {
   const middleware = validateRequest(
@@ -80,6 +81,15 @@ test("participation list filters reject undocumented lifecycle states", () => {
   assert.equal(request(invitationListRequest, "WITHDRAWN"), false);
   assert.equal(request(joinListRequest, "WITHDRAWN"), true);
   assert.equal(request(invitationListRequest, "REVOKED"), true);
+});
+
+test("owned gig views accept simplified filters without changing lifecycle states", () => {
+  const parse = (view) =>
+    listMineRequest.safeParse({ params: {}, query: { view }, body: undefined });
+  for (const view of ["DRAFT", "PUBLISHED", "ASSIGNED", "CLOSED", "ARCHIVED"])
+    assert.equal(parse(view).success, true);
+  assert.equal(parse("PENDING").success, false);
+  assert.equal(parse("COMPLETED").success, false);
 });
 
 test("portfolio updates validate dates after merging with stored values", async () => {

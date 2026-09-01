@@ -207,7 +207,7 @@ describe("Proposal workflow", () => {
     ).toBeInTheDocument();
     expect(screen.getByRole("link", { name: /View proposal/ })).toHaveAttribute(
       "href",
-      `/proposals/${PROPOSAL}`,
+      `/dashboard/proposals/${PROPOSAL}`,
     );
   });
   it("lets the owner shortlist and accept through labelled actions", async () => {

@@ -2,6 +2,7 @@ import {
   AlertCircle,
   Archive,
   CircleStop,
+  Clock3,
   Eye,
   FileText,
   Pencil,
@@ -13,9 +14,11 @@ import {
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { GigCard } from "../components/gigs/GigCard.jsx";
+import { useAuth } from "../context/auth-context.js";
 import { useToast } from "../context/toast-context.js";
 import { AppShell } from "../layouts/AppShell.jsx";
 import { confirmAction } from "../lib/confirm-action.js";
+import { clearPendingGig, readPendingGig } from "../lib/pending-gig.js";
 import { apiError, gigApi } from "../services/api.js";
 
 const confirmation = {
@@ -60,11 +63,8 @@ const statusFilters = [
   "DRAFT",
   "PUBLISHED",
   "ASSIGNED",
-  "ACTIVE",
-  "COMPLETION_PENDING",
-  "COMPLETED",
+  "PENDING",
   "CLOSED",
-  "CANCELLED",
   "ARCHIVED",
 ];
 const filterLabel = (value) =>
@@ -76,6 +76,7 @@ const filterLabel = (value) =>
     : "All";
 
 export function MyGigsPage() {
+  const { user } = useAuth();
   const { notify } = useToast();
   const [gigs, setGigs] = useState([]);
   const [status, setStatus] = useState("");
@@ -83,15 +84,24 @@ export function MyGigsPage() {
   const [error, setError] = useState("");
   const [busy, setBusy] = useState("");
   const [pagination, setPagination] = useState({});
+  const [pendingDraft, setPendingDraft] = useState(() =>
+    readPendingGig(user?.id),
+  );
   const requestSequence = useRef(0);
   const load = useCallback(
     async (cursor, append = false) => {
       const requestId = ++requestSequence.current;
       if (!append) setLoading(true);
       setError("");
+      if (status === "PENDING") {
+        setGigs([]);
+        setPagination({ hasMore: false });
+        setLoading(false);
+        return;
+      }
       try {
         const response = await gigApi.mine({
-          ...(status ? { status } : {}),
+          ...(status ? { view: status } : {}),
           ...(cursor ? { cursor } : {}),
         });
         if (requestId !== requestSequence.current) return;
@@ -118,6 +128,26 @@ export function MyGigsPage() {
   useEffect(() => {
     void load();
   }, [load]);
+
+  useEffect(() => {
+    const refreshPending = () => setPendingDraft(readPendingGig(user?.id));
+    window.addEventListener("focus", refreshPending);
+    return () => window.removeEventListener("focus", refreshPending);
+  }, [user?.id]);
+
+  const discardPending = async () => {
+    const confirmed = await confirmAction({
+      title: "Discard unfinished gig?",
+      text: "The locally saved incomplete gig will be removed. Published and saved draft gigs are not affected.",
+      confirmText: "Discard pending gig",
+      icon: "warning",
+      danger: true,
+    });
+    if (!confirmed) return;
+    clearPendingGig(user?.id);
+    setPendingDraft(null);
+    notify("Unfinished gig discarded.");
+  };
 
   const transition = async (gig, action, body = {}) => {
     if (!(await confirmAction(confirmation[action]))) return;
@@ -166,7 +196,7 @@ export function MyGigsPage() {
       {gig.proposalCount > 0 && (
         <Link
           className={`${actionClass} border-brand-200 bg-brand-50 text-brand-700 hover:bg-brand-100`}
-          to={`/my-gigs/${gig.id}/proposals`}
+          to={`/dashboard/gigs/${gig.id}/proposals`}
         >
           <FileText size={14} /> Proposals ({gig.proposalCount})
         </Link>
@@ -174,7 +204,7 @@ export function MyGigsPage() {
       {["DRAFT", "PUBLISHED"].includes(gig.status) && (
         <Link
           className={`${actionClass} border-slate-200 text-slate-600 hover:bg-slate-50`}
-          to={`/gigs/${gig.id}/edit`}
+          to={`/dashboard/gigs/${gig.id}/edit`}
         >
           <Pencil size={14} /> Edit
         </Link>
@@ -242,7 +272,7 @@ export function MyGigsPage() {
               Manage drafts, published opportunities, and retained history.
             </p>
           </div>
-          <Link className="btn-primary" to="/gigs/new">
+          <Link className="btn-primary" to="/dashboard/gigs/new">
             <Plus size={18} />
             Create Gig
           </Link>
@@ -275,7 +305,8 @@ export function MyGigsPage() {
               Try again
             </button>
           </div>
-        ) : gigs.length === 0 ? (
+        ) : gigs.length === 0 &&
+          !(pendingDraft && (!status || status === "PENDING")) ? (
           <div className="surface mt-7 p-10 text-center">
             <Eye className="mx-auto text-slate-400" />
             <h2 className="mt-4 text-xl font-bold">
@@ -287,7 +318,7 @@ export function MyGigsPage() {
               Choose another status or create a new gig.
             </p>
             {!status && (
-              <Link className="btn-primary mt-5" to="/gigs/new">
+              <Link className="btn-primary mt-5" to="/dashboard/gigs/new">
                 Create your first gig
               </Link>
             )}
@@ -295,6 +326,42 @@ export function MyGigsPage() {
         ) : (
           <>
             <div className="mt-7 grid gap-5 xl:grid-cols-2">
+              {pendingDraft && (!status || status === "PENDING") && (
+                <article className="surface overflow-hidden border-amber-200">
+                  <div className="flex items-center justify-between gap-3 border-b border-amber-100 bg-amber-50 px-5 py-3">
+                    <span className="inline-flex items-center gap-2 text-xs font-black uppercase tracking-wide text-amber-800">
+                      <Clock3 size={15} /> Pending
+                    </span>
+                    <span className="text-xs text-amber-700">
+                      Saved on this device
+                    </span>
+                  </div>
+                  <div className="p-5">
+                    <h2 className="text-lg font-black text-slate-950">
+                      {pendingDraft.values.title?.trim() || "Untitled gig"}
+                    </h2>
+                    <p className="mt-2 line-clamp-2 text-sm leading-6 text-slate-600">
+                      {pendingDraft.values.description?.trim() ||
+                        "Continue filling in the gig details before saving it as a draft."}
+                    </p>
+                    <div className="mt-5 flex flex-wrap gap-2">
+                      <Link
+                        className={`${actionClass} border-brand-200 bg-brand-50 text-brand-700 hover:bg-brand-100`}
+                        to="/dashboard/gigs/new"
+                      >
+                        <Pencil size={14} /> Continue editing
+                      </Link>
+                      <button
+                        type="button"
+                        className={`${actionClass} border-rose-200 text-rose-700 hover:bg-rose-50`}
+                        onClick={discardPending}
+                      >
+                        <Trash2 size={14} /> Discard
+                      </button>
+                    </div>
+                  </div>
+                </article>
+              )}
               {gigs.map((gig) => (
                 <GigCard key={gig.id} gig={gig} ownerActions={actions(gig)} />
               ))}

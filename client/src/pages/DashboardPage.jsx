@@ -49,7 +49,7 @@ export function DashboardPage() {
               owners understand what you bring.
             </p>
             <Link
-              to="/profile"
+              to="/dashboard/profile"
               className="mt-5 inline-flex items-center gap-2 text-sm font-bold text-brand-600"
             >
               Complete profile <ArrowRight size={16} />
@@ -97,7 +97,7 @@ export function DashboardPage() {
             <p className="mt-2 text-sm leading-6 text-slate-600">
               Create drafts, publish opportunities, and manage their lifecycle.
             </p>
-            <Link className="btn-secondary mt-5" to="/my-gigs">
+            <Link className="btn-secondary mt-5" to="/dashboard/gigs">
               Open My Gigs <ArrowRight size={16} />
             </Link>
           </article>

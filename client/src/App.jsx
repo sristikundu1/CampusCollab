@@ -1,5 +1,5 @@
 import { lazy, Suspense } from "react";
-import { Route, Routes } from "react-router-dom";
+import { Navigate, Route, Routes, useParams } from "react-router-dom";
 import {
   LoginRequiredRoute,
   ProtectedRoute,
@@ -140,6 +140,11 @@ function PageFallback() {
   );
 }
 
+function LegacyDashboardRedirect({ buildPath }) {
+  const params = useParams();
+  return <Navigate replace to={buildPath(params)} />;
+}
+
 export function App() {
   return (
     <Suspense fallback={<PageFallback />}>
@@ -161,37 +166,123 @@ export function App() {
         </Route>
         <Route element={<ProtectedRoute />}>
           <Route path="/dashboard" element={<DashboardPage />} />
-          <Route path="/profile" element={<ProfilePage />} />
-          <Route path="/gigs/new" element={<GigFormPage />} />
-          <Route path="/gigs/:gigId/edit" element={<GigFormPage />} />
-          <Route path="/my-gigs" element={<MyGigsPage />} />
+          <Route path="/dashboard/profile" element={<ProfilePage />} />
+          <Route path="/dashboard/gigs" element={<MyGigsPage />} />
           <Route
-            path="/my-gigs/:gigId/proposals"
+            path="/dashboard/gig"
+            element={<Navigate replace to="/dashboard/gigs" />}
+          />
+          <Route path="/dashboard/gigs/new" element={<GigFormPage />} />
+          <Route path="/dashboard/gigs/:gigId/edit" element={<GigFormPage />} />
+          <Route
+            path="/dashboard/gigs/:gigId/proposals"
             element={<GigProposalsPage />}
           />
-          <Route path="/proposals" element={<MyProposalsPage />} />
+          <Route path="/dashboard/proposals" element={<MyProposalsPage />} />
           <Route
-            path="/proposals/:proposalId"
+            path="/dashboard/proposals/:proposalId"
             element={<ProposalDetailsPage />}
           />
-          <Route path="/bookmarks" element={<BookmarksPage />} />
-          <Route path="/projects/new" element={<ProjectFormPage />} />
+          <Route path="/dashboard/bookmarks" element={<BookmarksPage />} />
+          <Route path="/dashboard/projects" element={<MyProjectsPage />} />
+          <Route path="/dashboard/projects/new" element={<ProjectFormPage />} />
           <Route
-            path="/projects/:projectId/edit"
+            path="/dashboard/projects/:projectId/edit"
             element={<ProjectFormPage />}
           />
-          <Route path="/my-projects" element={<MyProjectsPage />} />
           <Route
-            path="/my-projects/:projectId/manage"
+            path="/dashboard/projects/:projectId/manage"
             element={<ProjectManagePage />}
           />
           <Route
-            path="/join-requests"
+            path="/dashboard/join-requests"
             element={<ParticipationInboxPage type="joins" />}
           />
           <Route
-            path="/invitations"
+            path="/dashboard/invitations"
             element={<ParticipationInboxPage type="invitations" />}
+          />
+          <Route
+            path="/profile"
+            element={<Navigate replace to="/dashboard/profile" />}
+          />
+          <Route
+            path="/my-gigs"
+            element={<Navigate replace to="/dashboard/gigs" />}
+          />
+          <Route
+            path="/gigs/new"
+            element={<Navigate replace to="/dashboard/gigs/new" />}
+          />
+          <Route
+            path="/gigs/:gigId/edit"
+            element={
+              <LegacyDashboardRedirect
+                buildPath={({ gigId }) => `/dashboard/gigs/${gigId}/edit`}
+              />
+            }
+          />
+          <Route
+            path="/my-gigs/:gigId/proposals"
+            element={
+              <LegacyDashboardRedirect
+                buildPath={({ gigId }) => `/dashboard/gigs/${gigId}/proposals`}
+              />
+            }
+          />
+          <Route
+            path="/proposals"
+            element={<Navigate replace to="/dashboard/proposals" />}
+          />
+          <Route
+            path="/proposals/:proposalId"
+            element={
+              <LegacyDashboardRedirect
+                buildPath={({ proposalId }) =>
+                  `/dashboard/proposals/${proposalId}`
+                }
+              />
+            }
+          />
+          <Route
+            path="/bookmarks"
+            element={<Navigate replace to="/dashboard/bookmarks" />}
+          />
+          <Route
+            path="/my-projects"
+            element={<Navigate replace to="/dashboard/projects" />}
+          />
+          <Route
+            path="/projects/new"
+            element={<Navigate replace to="/dashboard/projects/new" />}
+          />
+          <Route
+            path="/projects/:projectId/edit"
+            element={
+              <LegacyDashboardRedirect
+                buildPath={({ projectId }) =>
+                  `/dashboard/projects/${projectId}/edit`
+                }
+              />
+            }
+          />
+          <Route
+            path="/my-projects/:projectId/manage"
+            element={
+              <LegacyDashboardRedirect
+                buildPath={({ projectId }) =>
+                  `/dashboard/projects/${projectId}/manage`
+                }
+              />
+            }
+          />
+          <Route
+            path="/join-requests"
+            element={<Navigate replace to="/dashboard/join-requests" />}
+          />
+          <Route
+            path="/invitations"
+            element={<Navigate replace to="/dashboard/invitations" />}
           />
         </Route>
         <Route path="*" element={<NotFoundPage />} />

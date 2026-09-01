@@ -110,7 +110,9 @@ export function ProposalDetailsPage() {
         <Link
           className="inline-flex items-center gap-2 text-sm font-bold text-brand-700"
           to={
-            isApplicant ? "/proposals" : `/my-gigs/${proposal.gig.id}/proposals`
+            isApplicant
+              ? "/dashboard/proposals"
+              : `/dashboard/gigs/${proposal.gig.id}/proposals`
           }
         >
           <ArrowLeft size={16} />

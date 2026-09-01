@@ -25,7 +25,7 @@ export function MyProjectsPage() {
               Projects you own and teams you have joined.
             </p>
           </div>
-          <Link className="btn-primary" to="/projects/new">
+          <Link className="btn-primary" to="/dashboard/projects/new">
             <Plus size={17} />
             Create project
           </Link>

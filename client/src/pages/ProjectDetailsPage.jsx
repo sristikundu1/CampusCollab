@@ -208,7 +208,7 @@ export function ProjectDetailsPage() {
               {project.isOwner && (
                 <Link
                   className="btn-primary mt-6 w-full"
-                  to={`/my-projects/${project.id}/manage`}
+                  to={`/dashboard/projects/${project.id}/manage`}
                 >
                   Manage project
                 </Link>

@@ -135,7 +135,10 @@ export function ProjectManagePage() {
             </p>
           </div>
           <div className="flex flex-wrap gap-2">
-            <Link className="btn-secondary" to={`/projects/${project.id}/edit`}>
+            <Link
+              className="btn-secondary"
+              to={`/dashboard/projects/${project.id}/edit`}
+            >
               <Pencil size={16} />
               Edit
             </Link>

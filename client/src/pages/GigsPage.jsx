@@ -132,7 +132,7 @@ export function GigsPage() {
             </p>
           </div>
           {isAuthenticated ? (
-            <Link className="btn-primary" to="/gigs/new">
+            <Link className="btn-primary" to="/dashboard/gigs/new">
               <Plus size={18} />
               Create Gig
             </Link>

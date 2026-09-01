@@ -100,6 +100,7 @@ paths:
       summary: List gigs owned by the authenticated user
       security: [{ sessionCookie: [] }]
       parameters:
+        - { in: query, name: view, description: Simplified owner view that groups existing lifecycle states, schema: { type: string, enum: [DRAFT, PUBLISHED, ASSIGNED, CLOSED, ARCHIVED] } }
         - { in: query, name: status, schema: { $ref: '#/components/schemas/GigStatus' } }
         - { in: query, name: cursor, schema: { type: string } }
         - { in: query, name: limit, schema: { type: integer, minimum: 1, maximum: 50 } }

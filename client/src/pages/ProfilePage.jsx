@@ -1,6 +1,8 @@
 import {
   AlertCircle,
   CheckCircle2,
+  BookOpen,
+  Clock3,
   ExternalLink,
   Eye,
   GraduationCap,
@@ -189,7 +191,7 @@ export function ProfilePage() {
   const VisibilityIcon = profile.visibility === "PRIVATE" ? LockKeyhole : Eye;
   return (
     <AppShell>
-      <div className="mx-auto max-w-5xl">
+      <div className="mx-auto max-w-6xl">
         <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
           <div>
             <p className="eyebrow">Professional identity</p>
@@ -221,17 +223,21 @@ export function ProfilePage() {
           />
         )}
         <section className="surface mt-6 overflow-hidden">
-          <div className="h-32 bg-[radial-gradient(circle_at_80%_20%,#60a5fa_0,transparent_30%),linear-gradient(120deg,#172554,#2856cc)]" />
-          <div className="px-6 pb-7 sm:px-8">
-            <div className="-mt-14 flex flex-col gap-4 sm:flex-row sm:items-end">
+          <div className="relative h-36 bg-[radial-gradient(circle_at_78%_20%,#60a5fa_0,transparent_25%),radial-gradient(circle_at_15%_90%,#4338ca_0,transparent_30%),linear-gradient(120deg,#172554,#2856cc)] sm:h-40">
+            <div className="absolute inset-0 opacity-20 [background-image:radial-gradient(circle_at_center,white_1px,transparent_1px)] [background-size:22px_22px]" />
+          </div>
+          <div className="px-5 pb-7 sm:px-8">
+            <div className="-mt-12 flex flex-col gap-4 sm:-mt-14 sm:flex-row sm:items-end">
               <div
-                className="grid size-28 place-items-center rounded-3xl border-4 border-white bg-brand-100 text-3xl font-black text-brand-700 shadow-sm"
+                className="grid size-24 shrink-0 place-items-center rounded-full border-4 border-white bg-brand-100 text-2xl font-black text-brand-700 shadow-lg sm:size-28 sm:text-3xl"
                 aria-label="Profile avatar"
               >
                 {initials}
               </div>
-              <div className="flex-1 pb-1">
-                <h2 className="text-2xl font-bold">{profile.displayName}</h2>
+              <div className="min-w-0 flex-1 pb-1">
+                <h2 className="text-2xl font-black tracking-tight text-slate-950 sm:text-3xl">
+                  {profile.displayName}
+                </h2>
                 <p className="mt-1 font-medium text-slate-600">
                   {profile.headline || "Add a professional headline"}
                 </p>
@@ -252,7 +258,7 @@ export function ProfilePage() {
                   </span>
                 </div>
               </div>
-              <div className="min-w-44 rounded-2xl bg-slate-50 p-4">
+              <div className="w-full rounded-2xl border border-slate-200 bg-slate-50 p-4 sm:w-56">
                 <div className="flex items-center justify-between text-sm">
                   <span className="font-semibold">Profile completion</span>
                   <strong className="text-brand-700">
@@ -280,10 +286,6 @@ export function ProfilePage() {
                 </p>
               </div>
             </div>
-            <p className="mt-6 max-w-3xl whitespace-pre-wrap text-sm leading-7 text-slate-600">
-              {profile.bio ||
-                "Add a short bio about your interests, strengths, and what you want to build."}
-            </p>
             {profile.externalLinks?.length > 0 && (
               <div className="mt-4 flex flex-wrap gap-3">
                 {profile.externalLinks.map((link) => (
@@ -301,21 +303,77 @@ export function ProfilePage() {
             )}
           </div>
         </section>
-        <div className="mt-5 grid gap-5 lg:grid-cols-[1.35fr_.8fr]">
-          <SkillsEditor
-            key={`skills-${profile.version}`}
-            profileSkills={profile.skills}
-            catalogue={catalogue}
-            saving={busy === "skills"}
-            onSave={saveSkills}
-            onCreateSkill={createSkill}
-          />
-          <AvailabilityEditor
-            key={`availability-${profile.version}`}
-            availability={profile.availability}
-            saving={busy === "availability"}
-            onSave={saveAvailability}
-          />
+        <div className="mt-5 grid gap-5 lg:grid-cols-[minmax(0,1.45fr)_minmax(280px,.7fr)]">
+          <div className="space-y-5">
+            <section className="surface p-6 sm:p-7">
+              <p className="eyebrow">Introduction</p>
+              <h2 className="mt-1 text-xl font-bold text-slate-950">
+                About me
+              </h2>
+              <p className="mt-4 whitespace-pre-wrap leading-7 text-slate-600">
+                {profile.bio ||
+                  "Add a short bio about your interests, strengths, and what you want to build."}
+              </p>
+            </section>
+            <SkillsEditor
+              key={`skills-${profile.version}`}
+              profileSkills={profile.skills}
+              catalogue={catalogue}
+              saving={busy === "skills"}
+              onSave={saveSkills}
+              onCreateSkill={createSkill}
+            />
+          </div>
+          <div className="space-y-5">
+            <AvailabilityEditor
+              key={`availability-${profile.version}`}
+              availability={profile.availability}
+              saving={busy === "availability"}
+              onSave={saveAvailability}
+            />
+            <section className="surface p-6">
+              <div className="flex items-center gap-3">
+                <span className="grid size-10 place-items-center rounded-xl bg-brand-50 text-brand-700">
+                  <BookOpen size={19} />
+                </span>
+                <div>
+                  <p className="eyebrow">Academic profile</p>
+                  <h2 className="mt-0.5 font-bold text-slate-950">
+                    Education & experience
+                  </h2>
+                </div>
+              </div>
+              <dl className="mt-5 grid gap-4 text-sm">
+                <div>
+                  <dt className="text-xs font-bold uppercase tracking-wide text-slate-400">
+                    Department
+                  </dt>
+                  <dd className="mt-1 font-semibold text-slate-700">
+                    {profile.department || "Not added yet"}
+                  </dd>
+                </div>
+                <div>
+                  <dt className="text-xs font-bold uppercase tracking-wide text-slate-400">
+                    Graduation year
+                  </dt>
+                  <dd className="mt-1 font-semibold text-slate-700">
+                    {profile.graduationYear || "Not added yet"}
+                  </dd>
+                </div>
+                <div>
+                  <dt className="text-xs font-bold uppercase tracking-wide text-slate-400">
+                    Experience level
+                  </dt>
+                  <dd className="mt-1 flex items-center gap-2 font-semibold text-slate-700">
+                    <Clock3 size={15} className="text-brand-600" />
+                    {profile.experienceLevel
+                      ? profile.experienceLevel.toLowerCase()
+                      : "Not selected"}
+                  </dd>
+                </div>
+              </dl>
+            </section>
+          </div>
         </div>
         <div className="mt-5">
           <PortfolioSection

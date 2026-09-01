@@ -1,7 +1,7 @@
 import { LoaderCircle, Plus } from "lucide-react";
 import { useState } from "react";
 
-export function CustomSkillForm({ onCreate, compact = false }) {
+export function CustomSkillForm({ onCreate, onCancel, compact = false }) {
   const [name, setName] = useState("");
   const [category, setCategory] = useState("");
   const [saving, setSaving] = useState(false);
@@ -34,7 +34,7 @@ export function CustomSkillForm({ onCreate, compact = false }) {
       <p className="mt-1 text-xs leading-5 text-slate-500">
         Create a reusable skill for your profile and future gigs.
       </p>
-      <div className="mt-3 grid gap-2 sm:grid-cols-[1fr_1fr_auto]">
+      <div className="mt-3 grid gap-2 sm:grid-cols-[1fr_1fr_auto_auto]">
         <input
           aria-label="Custom skill name"
           className="field !py-2.5"
@@ -66,6 +66,15 @@ export function CustomSkillForm({ onCreate, compact = false }) {
           )}{" "}
           Add
         </button>
+        {onCancel && (
+          <button
+            type="button"
+            className="btn-secondary !px-4 !py-2.5"
+            onClick={onCancel}
+          >
+            Cancel
+          </button>
+        )}
       </div>
     </Container>
   );

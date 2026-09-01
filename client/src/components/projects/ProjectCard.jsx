@@ -60,7 +60,7 @@ export function ProjectCard({ project }) {
         </div>
         {project.isOwner && (
           <Link
-            to={`/my-projects/${project.id}/manage`}
+            to={`/dashboard/projects/${project.id}/manage`}
             className="mt-3 flex items-center justify-center gap-2 rounded-xl border border-indigo-200 bg-indigo-50 px-4 py-2 text-sm font-bold text-indigo-700"
           >
             <BriefcaseBusiness size={15} />

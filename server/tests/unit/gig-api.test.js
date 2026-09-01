@@ -173,6 +173,17 @@ test("gig discovery is public, server-filtered, and cursor paginated", () =>
     assert.equal(calls.at(-1)[0], "list");
     assert.equal(calls.at(-1)[1].q, "campus");
   }));
+test("owned gig list accepts simplified lifecycle views", () =>
+  withServer(async (base, calls) => {
+    const response = await fetch(
+      `${base}/api/v1/gigs/mine?view=ASSIGNED&limit=5`,
+      { headers: headers() },
+    );
+    assert.equal(response.status, 200);
+    assert.equal(calls.at(-1)[0], "mine");
+    assert.equal(calls.at(-1)[2].view, "ASSIGNED");
+    assert.equal(calls.at(-1)[2].limit, 5);
+  }));
 test("authenticated user creates a draft from session identity", () =>
   withServer(async (base, calls) => {
     assert.equal(

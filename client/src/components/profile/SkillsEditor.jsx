@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { Check, Search, X } from "lucide-react";
+import { Check, Plus, Search, X } from "lucide-react";
 import { Spinner } from "../Spinner.jsx";
 import { CustomSkillForm } from "../skills/CustomSkillForm.jsx";
 
@@ -11,6 +11,7 @@ export function SkillsEditor({
   onCreateSkill,
 }) {
   const [query, setQuery] = useState("");
+  const [adding, setAdding] = useState(false);
   const [selected, setSelected] = useState(() =>
     Object.fromEntries(
       profileSkills.map((skill) => [
@@ -52,29 +53,64 @@ export function SkillsEditor({
         ...current,
         [skill.id]: { skillId: skill.id, level: "BEGINNER", evidence: "" },
       }));
+    if (skill) setAdding(false);
     return skill;
   };
   return (
     <section className="surface p-6">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <p className="eyebrow">Skills</p>
-          <h2 className="mt-1 text-xl font-bold">What you bring</h2>
+          <p className="eyebrow">Expertise</p>
+          <h2 className="mt-1 text-xl font-bold">Skills & Technologies</h2>
         </div>
-        <button
-          className="btn-primary"
-          disabled={saving}
-          onClick={() => onSave(Object.values(selected))}
-        >
-          {saving ? (
-            <Spinner label="Saving" />
-          ) : (
-            <>
-              <Check size={17} /> Save skills
-            </>
-          )}
-        </button>
+        <div className="flex flex-wrap gap-2">
+          <button
+            type="button"
+            className="btn-secondary !px-4 !py-2.5"
+            onClick={() => setAdding((current) => !current)}
+          >
+            <Plus size={16} /> Add skill
+          </button>
+          <button
+            type="button"
+            className="btn-primary !px-4 !py-2.5"
+            disabled={saving}
+            onClick={() => onSave(Object.values(selected))}
+          >
+            {saving ? (
+              <Spinner label="Saving" />
+            ) : (
+              <>
+                <Check size={17} /> Save skills
+              </>
+            )}
+          </button>
+        </div>
       </div>
+      {Object.keys(selected).length > 0 && (
+        <div className="mt-5 flex flex-wrap gap-2" aria-label="Selected skills">
+          {Object.values(selected).map((entry) => {
+            const skill = catalogue.find((item) => item.id === entry.skillId);
+            if (!skill) return null;
+            return (
+              <span
+                key={entry.skillId}
+                className="inline-flex items-center gap-1.5 rounded-full bg-brand-50 px-3 py-1.5 text-xs font-bold text-brand-700"
+              >
+                {skill.name}
+                <button
+                  type="button"
+                  aria-label={`Remove ${skill.name}`}
+                  className="rounded-full text-brand-500 hover:text-rose-600"
+                  onClick={() => toggle(skill)}
+                >
+                  <X size={13} />
+                </button>
+              </span>
+            );
+          })}
+        </div>
+      )}
       <div className="relative mt-5">
         <Search className="absolute left-3 top-3.5 text-slate-400" size={17} />
         <input
@@ -85,9 +121,15 @@ export function SkillsEditor({
           aria-label="Search skills"
         />
       </div>
-      <div className="mt-3">
-        <CustomSkillForm compact onCreate={createSkill} />
-      </div>
+      {adding && (
+        <div className="mt-3">
+          <CustomSkillForm
+            compact
+            onCreate={createSkill}
+            onCancel={() => setAdding(false)}
+          />
+        </div>
+      )}
       <div className="mt-4 grid max-h-80 gap-2 overflow-y-auto pr-1 sm:grid-cols-2">
         {visible.map((skill) => {
           const active = selected[skill.id];

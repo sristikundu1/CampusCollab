@@ -2,20 +2,30 @@ import { AlertCircle } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { GigForm } from "../components/gigs/GigForm.jsx";
+import { useAuth } from "../context/auth-context.js";
 import { useToast } from "../context/toast-context.js";
 import { AppShell } from "../layouts/AppShell.jsx";
+import {
+  clearPendingGig,
+  readPendingGig,
+  savePendingGig,
+} from "../lib/pending-gig.js";
 import { apiError, gigApi, skillApi } from "../services/api.js";
 
 export function GigFormPage() {
   const { gigId } = useParams();
   const editing = Boolean(gigId);
   const navigate = useNavigate();
+  const { user } = useAuth();
   const { notify } = useToast();
   const [gig, setGig] = useState(null);
   const [skills, setSkills] = useState([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+  const [pendingDraft] = useState(() =>
+    editing ? null : readPendingGig(user?.id),
+  );
   useEffect(() => {
     let active = true;
     Promise.all([skillApi.list(), ...(editing ? [gigApi.get(gigId)] : [])])
@@ -63,6 +73,7 @@ export function GigFormPage() {
         ? (await gigApi.update(gigId, body)).data.data.gig
         : (await gigApi.create(body)).data.data.gig;
       notify(editing ? "Gig updated." : "Gig draft created.");
+      if (!editing) clearPendingGig(user?.id);
       navigate(`/gigs/${result.id}`);
     } catch (reason) {
       notify(apiError(reason).message, "error");
@@ -75,7 +86,7 @@ export function GigFormPage() {
       <div className="mx-auto max-w-4xl">
         <Link
           className="text-sm font-bold text-brand-700"
-          to={editing ? `/gigs/${gigId}` : "/my-gigs"}
+          to={editing ? `/gigs/${gigId}` : "/dashboard/gigs"}
         >
           ← Back
         </Link>
@@ -99,10 +110,17 @@ export function GigFormPage() {
           <div className="mt-7">
             <GigForm
               initial={gig}
+              pendingDraft={pendingDraft}
               skills={skills}
               saving={saving}
               onSubmit={submit}
               onCreateSkill={createSkill}
+              onDraftChange={
+                editing
+                  ? undefined
+                  : (values, selectedSkills) =>
+                      savePendingGig(user?.id, values, selectedSkills)
+              }
             />
           </div>
         )}

@@ -86,6 +86,7 @@ const auth = {
   loading: false,
   isAuthenticated: true,
   user: {
+    id: "aaaaaaaaaaaaaaaaaaaaaaaa",
     email: "student@bscse.uiu.ac.bd",
     profile: { displayName: "Student" },
   },
@@ -104,6 +105,7 @@ function renderAt(ui, path = "/gigs", value = auth) {
   );
 }
 beforeEach(() => {
+  window.localStorage.clear();
   mocks.list.mockImplementation(() =>
     response(
       { gigs: [gig] },
@@ -114,7 +116,7 @@ beforeEach(() => {
     response(
       {
         gigs:
-          !params.status || params.status === "DRAFT"
+          !params.view || params.view === "DRAFT"
             ? [
                 {
                   ...gig,
@@ -276,6 +278,31 @@ describe("Gigs Marketplace", () => {
     ).toBeInTheDocument();
     expect(mocks.create).not.toHaveBeenCalled();
   });
+  it("autosaves incomplete creation locally as Pending", async () => {
+    const user = userEvent.setup();
+    renderAt(
+      <Routes>
+        <Route path="/dashboard/gigs/new" element={<GigFormPage />} />
+      </Routes>,
+      "/dashboard/gigs/new",
+    );
+    await user.type(
+      await screen.findByLabelText("Gig title"),
+      "Incomplete dashboard",
+    );
+    await waitFor(
+      () => {
+        const saved = JSON.parse(
+          window.localStorage.getItem(
+            `campuscollab:pending-gig:${auth.user.id}`,
+          ),
+        );
+        expect(saved.values.title).toBe("Incomplete dashboard");
+      },
+      { timeout: 1500 },
+    );
+    expect(mocks.create).not.toHaveBeenCalled();
+  });
   it("creates and automatically selects a custom gig skill", async () => {
     const user = userEvent.setup();
     renderAt(
@@ -363,13 +390,35 @@ describe("Gigs Marketplace", () => {
     await screen.findByLabelText("Gig status: Draft");
     await user.click(screen.getByRole("button", { name: "Published" }));
     await waitFor(() =>
-      expect(mocks.mine).toHaveBeenLastCalledWith({ status: "PUBLISHED" }),
+      expect(mocks.mine).toHaveBeenLastCalledWith({ view: "PUBLISHED" }),
     );
     expect(
       await screen.findByRole("heading", {
         name: "No published gigs in this view",
       }),
     ).toBeInTheDocument();
+  });
+  it("keeps unfinished creation separate from saved drafts", async () => {
+    window.localStorage.setItem(
+      `campuscollab:pending-gig:${auth.user.id}`,
+      JSON.stringify({
+        version: 1,
+        values: { title: "Incomplete dashboard gig", description: "" },
+        selectedSkills: [],
+        updatedAt: new Date().toISOString(),
+      }),
+    );
+    const user = userEvent.setup();
+    renderAt(<MyGigsPage />, "/dashboard/gigs");
+    expect(
+      await screen.findByText("Incomplete dashboard gig"),
+    ).toBeInTheDocument();
+    expect(screen.getByLabelText("Gig status: Draft")).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Pending" }));
+    expect(screen.getByText("Incomplete dashboard gig")).toBeInTheDocument();
+    expect(
+      screen.queryByLabelText("Gig status: Draft"),
+    ).not.toBeInTheDocument();
   });
   it("removes a gig immediately when an action moves it outside the selected filter", async () => {
     const user = userEvent.setup();

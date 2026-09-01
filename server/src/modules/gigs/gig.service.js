@@ -253,9 +253,17 @@ export function createGigService({
     };
   }
   async function mine(userId, input) {
-    const scope = `mine:${userId}:${input.status ?? ""}`;
+    const viewStatuses = {
+      DRAFT: ["DRAFT"],
+      PUBLISHED: ["PUBLISHED"],
+      ASSIGNED: ["ASSIGNED", "ACTIVE", "COMPLETION_PENDING", "COMPLETED"],
+      CLOSED: ["CLOSED", "CANCELLED"],
+      ARCHIVED: ["ARCHIVED"],
+    };
+    const scope = `mine:${userId}:${input.view ?? input.status ?? ""}`;
     const filter = { ownerId: userId, ...cursorFilter(input.cursor, scope) };
-    if (input.status) filter.status = input.status;
+    if (input.view) filter.status = { $in: viewStatuses[input.view] };
+    else if (input.status) filter.status = input.status;
     const found = await GigModel.find(filter)
       .sort({ createdAt: -1, _id: -1 })
       .limit(input.limit + 1)

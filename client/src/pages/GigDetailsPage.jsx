@@ -148,7 +148,7 @@ export function GigDetailsPage() {
     try {
       await gigApi.remove(gig.id);
       notify("Gig permanently deleted.");
-      navigate("/my-gigs", { replace: true });
+      navigate("/dashboard/gigs", { replace: true });
     } catch (reason) {
       notify(apiError(reason).message, "error");
       setBusy(false);
@@ -215,7 +215,7 @@ export function GigDetailsPage() {
       <div className="mx-auto max-w-6xl">
         <Link
           className="inline-flex items-center gap-2 text-sm font-bold text-brand-700"
-          to={gig.isOwner ? "/my-gigs" : "/gigs"}
+          to={gig.isOwner ? "/dashboard/gigs" : "/gigs"}
         >
           <ArrowLeft size={16} />
           {gig.isOwner ? "Back to My Gigs" : "Back to opportunities"}
@@ -235,7 +235,7 @@ export function GigDetailsPage() {
               {["DRAFT", "PUBLISHED"].includes(gig.status) && (
                 <Link
                   className="btn-secondary !px-4 !py-2"
-                  to={`/gigs/${gig.id}/edit`}
+                  to={`/dashboard/gigs/${gig.id}/edit`}
                 >
                   <Pencil size={15} />
                   Edit
@@ -418,7 +418,7 @@ export function GigDetailsPage() {
             {gig.isOwner ? (
               <Link
                 className="btn-primary mt-6 w-full"
-                to={`/my-gigs/${gig.id}/proposals`}
+                to={`/dashboard/gigs/${gig.id}/proposals`}
               >
                 <FileText size={17} />
                 Review proposals ({gig.proposalCount})
@@ -431,7 +431,7 @@ export function GigDetailsPage() {
                 </p>
                 <Link
                   className="btn-primary mt-4 w-full"
-                  to={`/proposals/${application.id}`}
+                  to={`/dashboard/proposals/${application.id}`}
                 >
                   <FileText size={17} />
                   View your proposal

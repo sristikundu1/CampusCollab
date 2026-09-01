@@ -52,7 +52,7 @@ export function ProjectsPage() {
             </div>
             <Link
               className="inline-flex min-h-11 items-center justify-center rounded-xl bg-white px-5 py-3 text-sm font-bold text-indigo-800 shadow-sm transition hover:bg-blue-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
-              to="/projects/new"
+              to="/dashboard/projects/new"
             >
               Create project
             </Link>

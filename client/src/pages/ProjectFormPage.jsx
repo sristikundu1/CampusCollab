@@ -106,7 +106,7 @@ export function ProjectFormPage() {
         ).data.data.project.id;
       }
       notify(edit ? "Project updated." : "Project draft created.");
-      navigate(`/my-projects/${id}/manage`);
+      navigate(`/dashboard/projects/${id}/manage`);
     } catch (reason) {
       setError(apiError(reason).message);
     } finally {

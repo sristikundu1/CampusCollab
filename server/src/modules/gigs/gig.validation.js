@@ -102,6 +102,9 @@ const listQuery = z
   .strict();
 const mineQuery = z
   .object({
+    view: z
+      .enum(["DRAFT", "PUBLISHED", "ASSIGNED", "CLOSED", "ARCHIVED"])
+      .optional(),
     status: z
       .enum([
         "DRAFT",

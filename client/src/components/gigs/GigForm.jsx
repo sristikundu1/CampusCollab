@@ -1,7 +1,7 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Check, LoaderCircle, Save } from "lucide-react";
-import { useForm } from "react-hook-form";
-import { useState } from "react";
+import { useForm, useWatch } from "react-hook-form";
+import { useEffect, useState } from "react";
 import { z } from "zod";
 import { FormField } from "../FormField.jsx";
 import { CustomSkillForm } from "../skills/CustomSkillForm.jsx";
@@ -46,9 +46,19 @@ const schema = z
       });
   });
 
-export function GigForm({ initial, skills, saving, onSubmit, onCreateSkill }) {
+export function GigForm({
+  initial,
+  pendingDraft,
+  skills,
+  saving,
+  onSubmit,
+  onCreateSkill,
+  onDraftChange,
+}) {
   const budget = initial?.budget;
+  const pending = !initial ? pendingDraft?.values : null;
   const {
+    control,
     register,
     handleSubmit,
     watch,
@@ -56,26 +66,38 @@ export function GigForm({ initial, skills, saving, onSubmit, onCreateSkill }) {
   } = useForm({
     resolver: zodResolver(schema),
     defaultValues: {
-      title: initial?.title || "",
-      description: initial?.description || "",
-      category: initial?.category || "",
-      workMode: initial?.workMode || "REMOTE",
-      locationText: initial?.locationText || "",
-      visibility: initial?.visibility || "PLATFORM",
-      capacity: initial?.capacity || 1,
+      title: initial?.title || pending?.title || "",
+      description: initial?.description || pending?.description || "",
+      category: initial?.category || pending?.category || "",
+      workMode: initial?.workMode || pending?.workMode || "REMOTE",
+      locationText: initial?.locationText || pending?.locationText || "",
+      visibility: initial?.visibility || pending?.visibility || "PLATFORM",
+      capacity: initial?.capacity || pending?.capacity || 1,
       deadlineAt: initial?.deadlineAt
         ? new Date(initial.deadlineAt).toISOString().slice(0, 16)
-        : "",
-      budgetType: budget?.type || "UNPAID",
+        : pending?.deadlineAt || "",
+      budgetType: budget?.type || pending?.budgetType || "UNPAID",
       minAmount:
-        budget?.minMinor !== undefined ? String(budget.minMinor / 100) : "",
+        budget?.minMinor !== undefined
+          ? String(budget.minMinor / 100)
+          : pending?.minAmount || "",
       maxAmount:
-        budget?.maxMinor !== undefined ? String(budget.maxMinor / 100) : "",
-      currency: budget?.currency || "BDT",
+        budget?.maxMinor !== undefined
+          ? String(budget.maxMinor / 100)
+          : pending?.maxAmount || "",
+      currency: budget?.currency || pending?.currency || "BDT",
     },
   });
-  const [selected, setSelected] = useStateFromInitial(initial?.skills || []);
+  const [selected, setSelected] = useStateFromInitial(
+    initial?.skills || pendingDraft?.selectedSkills || [],
+  );
+  const formValues = useWatch({ control });
   const budgetType = watch("budgetType");
+  useEffect(() => {
+    if (!onDraftChange) return undefined;
+    const timer = setTimeout(() => onDraftChange(formValues, selected), 350);
+    return () => clearTimeout(timer);
+  }, [formValues, onDraftChange, selected]);
   const createSkill = async (input) => {
     const skill = await onCreateSkill(input);
     if (skill)

@@ -9,7 +9,8 @@ import {
 import { useCallback, useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { GigCard } from "../components/gigs/GigCard.jsx";
-import { Logo } from "../components/Logo.jsx";
+import { SiteFooter } from "../components/navigation/SiteFooter.jsx";
+import { SiteHeader } from "../components/navigation/SiteHeader.jsx";
 import { Spinner } from "../components/Spinner.jsx";
 import { useAuth } from "../context/auth-context.js";
 import { useToast } from "../context/toast-context.js";
@@ -17,7 +18,7 @@ import { showLoginRequired } from "../lib/confirm-action.js";
 import { apiError, gigApi } from "../services/api.js";
 
 export function HomePage() {
-  const { loading: authLoading, isAuthenticated } = useAuth();
+  const { isAuthenticated } = useAuth();
   const { notify } = useToast();
   const navigate = useNavigate();
   const [gigs, setGigs] = useState([]);
@@ -79,38 +80,7 @@ export function HomePage() {
   };
   return (
     <div className="min-h-screen bg-white">
-      <header className="sticky top-0 z-30 border-b border-slate-100 bg-white/90 backdrop-blur">
-        <div className="mx-auto flex h-18 max-w-7xl items-center justify-between px-5 sm:px-8">
-          <Logo />
-          <nav className="flex items-center gap-2">
-            {!authLoading && isAuthenticated ? (
-              <>
-                <Link
-                  to="/gigs"
-                  className="hidden text-sm font-semibold text-slate-600 sm:block"
-                >
-                  Browse gigs
-                </Link>
-                <Link to="/dashboard" className="btn-primary !px-4 !py-2.5">
-                  Dashboard
-                </Link>
-              </>
-            ) : (
-              <>
-                <Link
-                  to="/login"
-                  className="hidden text-sm font-semibold text-slate-600 sm:block"
-                >
-                  Log in
-                </Link>
-                <Link to="/register" className="btn-primary !px-4 !py-2.5">
-                  Get started
-                </Link>
-              </>
-            )}
-          </nav>
-        </div>
-      </header>
+      <SiteHeader />
       <main>
         <section className="relative overflow-hidden bg-[radial-gradient(circle_at_20%_0%,#dbe8ff_0,transparent_28%),radial-gradient(circle_at_85%_20%,#e0e7ff_0,transparent_32%),linear-gradient(180deg,#f8faff_0,#fff_100%)] px-5 py-20 text-center sm:py-28">
           <div className="mx-auto max-w-5xl">
@@ -207,7 +177,7 @@ export function HomePage() {
                 Archive.
               </p>
               {isAuthenticated && (
-                <Link className="btn-primary mt-5" to="/gigs/new">
+                <Link className="btn-primary mt-5" to="/dashboard/gigs/new">
                   Create a gig
                 </Link>
               )}
@@ -246,6 +216,7 @@ export function HomePage() {
           </div>
         </section>
       </main>
+      <SiteFooter />
     </div>
   );
 }

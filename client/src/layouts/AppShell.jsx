@@ -4,7 +4,6 @@ import {
   FileText,
   FolderKanban,
   LayoutDashboard,
-  LogOut,
   MailCheck,
   Menu,
   Search,
@@ -13,70 +12,44 @@ import {
   X,
 } from "lucide-react";
 import { useState } from "react";
-import { NavLink, useNavigate } from "react-router-dom";
+import { NavLink } from "react-router-dom";
 import { Logo } from "../components/Logo.jsx";
-import { useAuth } from "../context/auth-context.js";
-import { useToast } from "../context/toast-context.js";
+import { UserMenu } from "../components/navigation/UserMenu.jsx";
 
 const links = [
   { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { to: "/gigs", label: "Discover gigs", icon: Search },
-  { to: "/my-gigs", label: "My gigs", icon: BriefcaseBusiness },
-  { to: "/proposals", label: "My proposals", icon: FileText },
+  { to: "/dashboard/gigs", label: "My gigs", icon: BriefcaseBusiness },
+  { to: "/dashboard/proposals", label: "My proposals", icon: FileText },
   { to: "/projects", label: "Discover projects", icon: FolderKanban },
-  { to: "/my-projects", label: "My projects", icon: FolderKanban },
-  { to: "/join-requests", label: "Join requests", icon: UserPlus },
-  { to: "/invitations", label: "Invitations", icon: MailCheck },
-  { to: "/bookmarks", label: "Bookmarks", icon: Bookmark },
-  { to: "/profile", label: "Profile", icon: UserRound },
+  { to: "/dashboard/projects", label: "My projects", icon: FolderKanban },
+  {
+    to: "/dashboard/join-requests",
+    label: "Join requests",
+    icon: UserPlus,
+  },
+  { to: "/dashboard/invitations", label: "Invitations", icon: MailCheck },
+  { to: "/dashboard/bookmarks", label: "Bookmarks", icon: Bookmark },
+  { to: "/dashboard/profile", label: "Profile", icon: UserRound },
 ];
 
 export function AppShell({ children }) {
   const [open, setOpen] = useState(false);
-  const { user, logout } = useAuth();
-  const { notify } = useToast();
-  const navigate = useNavigate();
-  const signOut = async () => {
-    try {
-      await logout();
-      navigate("/login");
-    } catch {
-      notify("Could not sign out. Please try again.", "error");
-    }
-  };
-  const initials =
-    user?.profile?.displayName
-      ?.split(/\s+/)
-      .map((part) => part[0])
-      .slice(0, 2)
-      .join("")
-      .toUpperCase() || "CC";
   return (
     <div className="min-h-screen bg-slate-50">
       <header className="sticky top-0 z-30 border-b border-slate-200 bg-white/90 backdrop-blur">
         <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6">
-          <Logo />
-          <div className="flex items-center gap-3">
-            <div
-              className="grid size-9 place-items-center rounded-xl bg-brand-50 text-xs font-black text-brand-700"
-              aria-hidden="true"
-            >
-              {initials}
-            </div>
-            <div className="hidden text-right sm:block">
-              <p className="text-sm font-semibold">
-                {user?.profile?.displayName}
-              </p>
-              <p className="text-xs text-slate-500">{user?.email}</p>
-            </div>
+          <div className="flex items-center gap-2">
             <button
-              className="rounded-xl p-2 lg:hidden"
+              className="rounded-xl p-2 text-slate-600 hover:bg-slate-100 lg:hidden"
               onClick={() => setOpen(!open)}
               aria-label={open ? "Close navigation" : "Open navigation"}
             >
               {open ? <X /> : <Menu />}
             </button>
+            <Logo />
           </div>
+          <UserMenu />
         </div>
       </header>
       <div className="mx-auto grid max-w-7xl lg:grid-cols-[220px_1fr]">
@@ -98,13 +71,6 @@ export function AppShell({ children }) {
               </NavLink>
             ))}
           </nav>
-          <button
-            onClick={signOut}
-            className="mt-6 flex w-full items-center gap-3 rounded-xl px-3 py-3 text-sm font-semibold text-slate-500 hover:bg-rose-50 hover:text-rose-700"
-          >
-            <LogOut size={19} />
-            Sign out
-          </button>
         </aside>
         <main className="min-w-0 p-4 sm:p-6 lg:p-10">{children}</main>
       </div>

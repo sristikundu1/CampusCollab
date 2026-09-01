@@ -182,6 +182,7 @@ describe("ProfilePage", () => {
     const user = userEvent.setup();
     renderPage();
     await screen.findByText("React");
+    await user.click(screen.getByRole("button", { name: "Add skill" }));
     await user.type(screen.getByLabelText("Custom skill name"), "Three.js");
     await user.type(screen.getByLabelText("Custom skill category"), "Frontend");
     await user.click(screen.getByRole("button", { name: "Add" }));
