@@ -33,6 +33,44 @@ paths:
       responses:
         '200': { description: Ready }
         '503': { description: MongoDB is unavailable }
+  /api/v1/auth/register:
+    post: { summary: Register with an approved university-domain address, responses: { '201': { description: Account created }, '409': { description: Address already registered }, '422': { $ref: '#/components/responses/ValidationError' } } }
+  /api/v1/auth/login:
+    post: { summary: Start an opaque server-side session, responses: { '200': { description: Session created }, '401': { description: Invalid credentials } } }
+  /api/v1/auth/logout:
+    post: { summary: Revoke the current session, security: [{ sessionCookie: [], csrfToken: [] }], responses: { '204': { description: Session revoked } } }
+  /api/v1/auth/me:
+    get: { summary: Read the authenticated user and CSRF token, security: [{ sessionCookie: [] }], responses: { '200': { description: Current session }, '401': { description: Authentication required } } }
+  /api/v1/auth/verify-email:
+    post: { summary: Verify an email token when verification is enabled, responses: { '200': { description: Address verified }, '422': { $ref: '#/components/responses/ValidationError' } } }
+  /api/v1/auth/verification/resend:
+    post: { summary: Request another verification message when email delivery is enabled, responses: { '202': { description: Request accepted } } }
+  /api/v1/auth/password/forgot:
+    post: { summary: Request password recovery when email delivery is enabled, responses: { '202': { description: Request accepted } } }
+  /api/v1/auth/password/reset:
+    post: { summary: Reset a password with a valid recovery token, responses: { '200': { description: Password reset }, '422': { $ref: '#/components/responses/ValidationError' } } }
+  /api/v1/profiles/me:
+    get: { summary: Read the authenticated profile, security: [{ sessionCookie: [] }], responses: { '200': { description: Own profile } } }
+    post: { summary: Create a missing authenticated profile, security: [{ sessionCookie: [], csrfToken: [] }], responses: { '201': { description: Profile created }, '409': { description: Profile already exists } } }
+    patch: { summary: Update allowlisted own-profile fields, security: [{ sessionCookie: [], csrfToken: [] }], responses: { '200': { description: Profile updated }, '422': { $ref: '#/components/responses/ValidationError' } } }
+  /api/v1/profiles/me/skills:
+    put: { summary: Replace own profile skills, security: [{ sessionCookie: [], csrfToken: [] }], responses: { '200': { description: Skills updated } } }
+  /api/v1/profiles/me/availability:
+    patch: { summary: Update consistent availability fields, security: [{ sessionCookie: [], csrfToken: [] }], responses: { '200': { description: Availability updated }, '422': { $ref: '#/components/responses/ValidationError' } } }
+  /api/v1/profiles/me/portfolio-items:
+    get: { summary: List own portfolio items, security: [{ sessionCookie: [] }], responses: { '200': { description: Portfolio items } } }
+    post: { summary: Create an own portfolio item, security: [{ sessionCookie: [], csrfToken: [] }], responses: { '201': { description: Portfolio item created } } }
+  /api/v1/profiles/{userId}:
+    get: { summary: Read a visibility-safe public profile, responses: { '200': { description: Public profile }, '404': { description: Missing or concealed profile } } }
+  /api/v1/profiles/{userId}/portfolio-items:
+    get: { summary: List visibility-safe published portfolio items, responses: { '200': { description: Published portfolio items } } }
+  /api/v1/portfolio-items/{itemId}:
+    get: { summary: Read an owned or published portfolio item, responses: { '200': { description: Portfolio item }, '404': { description: Missing or concealed item } } }
+    patch: { summary: Update an own portfolio item, security: [{ sessionCookie: [], csrfToken: [] }], responses: { '200': { description: Portfolio item updated } } }
+    delete: { summary: Archive an own portfolio item, security: [{ sessionCookie: [], csrfToken: [] }], responses: { '204': { description: Portfolio item archived } } }
+  /api/v1/skills:
+    get: { summary: List active canonical and custom skills, responses: { '200': { description: Skill catalogue } } }
+    post: { summary: Create a normalized custom skill, security: [{ sessionCookie: [], csrfToken: [] }], responses: { '201': { description: Skill created } } }
   /api/v1/gigs:
     get:
       summary: Discover published visible gigs
@@ -93,7 +131,7 @@ paths:
       responses:
         '204': { description: Gig and related bookmarks permanently deleted }
         '404': { description: Missing or non-owned gig }
-        '409': { description: Invalid lifecycle state, collaboration history, or concurrent modification }
+        '409': { description: 'Invalid lifecycle state, collaboration history, or concurrent modification' }
   /api/v1/gigs/{gigId}:publish:
     post: { summary: Publish an owned draft, security: [{ sessionCookie: [], csrfToken: [] }], parameters: [{ $ref: '#/components/parameters/GigId' }], responses: { '200': { description: Published }, '409': { description: Invalid state or incomplete gig } } }
   /api/v1/gigs/{gigId}:close:
@@ -124,7 +162,7 @@ paths:
       summary: Submit one active proposal as the authenticated eligible student
       security: [{ sessionCookie: [], csrfToken: [], idempotencyKey: [] }]
       requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/ProposalRevisionWrite' } } } }
-      responses: { '201': { description: Proposal submitted }, '404': { description: Gig unavailable or concealed }, '409': { description: Duplicate, incomplete profile, invalid gig state, deadline, or capacity conflict }, '422': { $ref: '#/components/responses/ValidationError' } }
+      responses: { '201': { description: Proposal submitted }, '404': { description: Gig unavailable or concealed }, '409': { description: 'Duplicate, incomplete profile, invalid gig state, deadline, or capacity conflict' }, '422': { $ref: '#/components/responses/ValidationError' } }
     get:
       summary: List proposals for an owned gig
       security: [{ sessionCookie: [] }]
@@ -143,13 +181,13 @@ paths:
       summary: Append a revision to an active own proposal
       security: [{ sessionCookie: [], csrfToken: [], idempotencyKey: [] }]
       requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/ProposalRevisionWrite' } } } }
-      responses: { '200': { description: Revision appended }, '404': { description: Missing or non-owned proposal }, '409': { description: Invalid state, revision limit, or concurrent modification } }
+      responses: { '200': { description: Revision appended }, '404': { description: Missing or non-owned proposal }, '409': { description: 'Invalid state, revision limit, or concurrent modification' } }
   /api/v1/proposals/{proposalId}:withdraw:
     post: { summary: Withdraw an active own proposal, security: [{ sessionCookie: [], csrfToken: [], idempotencyKey: [] }], parameters: [{ $ref: '#/components/parameters/ProposalId' }], responses: { '200': { description: Withdrawn idempotently }, '404': { description: Missing or non-owned proposal }, '409': { description: Invalid state } } }
   /api/v1/proposals/{proposalId}:shortlist:
     post: { summary: Shortlist a submitted proposal as gig owner, security: [{ sessionCookie: [], csrfToken: [], idempotencyKey: [] }], parameters: [{ $ref: '#/components/parameters/ProposalId' }], responses: { '200': { description: Shortlisted }, '404': { description: Missing or non-owned gig proposal }, '409': { description: Invalid state or concurrent modification } } }
   /api/v1/proposals/{proposalId}:accept:
-    post: { summary: Atomically accept a proposal within gig capacity, security: [{ sessionCookie: [], csrfToken: [], idempotencyKey: [] }], parameters: [{ $ref: '#/components/parameters/ProposalId' }], responses: { '200': { description: Accepted and gig capacity updated }, '404': { description: Missing or non-owned gig proposal }, '409': { description: Invalid state, eligibility, capacity, or concurrent modification } } }
+    post: { summary: Atomically accept a proposal within gig capacity, security: [{ sessionCookie: [], csrfToken: [], idempotencyKey: [] }], parameters: [{ $ref: '#/components/parameters/ProposalId' }], responses: { '200': { description: Accepted and gig capacity updated }, '404': { description: Missing or non-owned gig proposal }, '409': { description: 'Invalid state, eligibility, capacity, or concurrent modification' } } }
   /api/v1/proposals/{proposalId}:reject:
     post: { summary: Reject an active proposal as gig owner, security: [{ sessionCookie: [], csrfToken: [], idempotencyKey: [] }], parameters: [{ $ref: '#/components/parameters/ProposalId' }], responses: { '200': { description: Rejected }, '404': { description: Missing or non-owned gig proposal }, '409': { description: Invalid state or concurrent modification } } }
   /api/v1/projects:
@@ -164,7 +202,7 @@ paths:
   /api/v1/projects/{projectId}:publish:
     post: { summary: Publish a complete owned draft, security: [{ sessionCookie: [], csrfToken: [], idempotencyKey: [] }], parameters: [{ $ref: '#/components/parameters/ProjectId' }], responses: { '200': { description: Recruiting project }, '409': { description: Incomplete or invalid state } } }
   /api/v1/projects/{projectId}:transition:
-    post: { summary: Start, cancel, or archive an owned project through its state machine, security: [{ sessionCookie: [], csrfToken: [], idempotencyKey: [] }], parameters: [{ $ref: '#/components/parameters/ProjectId' }], responses: { '200': { description: Transition completed }, '409': { description: Invalid state or start precondition } } }
+    post: { summary: 'Start, cancel, or archive an owned project through its state machine', security: [{ sessionCookie: [], csrfToken: [], idempotencyKey: [] }], parameters: [{ $ref: '#/components/parameters/ProjectId' }], responses: { '200': { description: Transition completed }, '409': { description: Invalid state or start precondition } } }
   /api/v1/projects/{projectId}/recruitment:
     patch: { summary: Toggle recruitment independently for recruiting or active projects, security: [{ sessionCookie: [], csrfToken: [], idempotencyKey: [] }], parameters: [{ $ref: '#/components/parameters/ProjectId' }], responses: { '200': { description: Recruitment state updated } } }
   /api/v1/projects/{projectId}/openings:
@@ -176,23 +214,29 @@ paths:
   /api/v1/projects/{projectId}/openings/{openingId}:reopen:
     post: { summary: Reopen an eligible opening with remaining capacity, security: [{ sessionCookie: [], csrfToken: [], idempotencyKey: [] }], parameters: [{ $ref: '#/components/parameters/ProjectId' }, { $ref: '#/components/parameters/OpeningId' }], responses: { '200': { description: Opening reopened } } }
   /api/v1/projects/{projectId}/openings/{openingId}/join-requests:
-    post: { summary: Submit one idempotent authenticated-student join request, security: [{ sessionCookie: [], csrfToken: [], idempotencyKey: [] }], responses: { '201': { description: Join request submitted }, '409': { description: Duplicate, membership, lifecycle, or capacity conflict } } }
+    post: { summary: Submit one idempotent authenticated-student join request, security: [{ sessionCookie: [], csrfToken: [], idempotencyKey: [] }], responses: { '201': { description: Join request submitted }, '409': { description: 'Duplicate, membership, lifecycle, or capacity conflict' } } }
   /api/v1/join-requests/mine:
     get: { summary: List authenticated applicant join requests, security: [{ sessionCookie: [] }], responses: { '200': { description: Private join-request list } } }
   /api/v1/projects/{projectId}/join-requests:
     get: { summary: List requests for an owned project, security: [{ sessionCookie: [] }], responses: { '200': { description: Owner review list }, '404': { description: Missing or non-owned project } } }
+  /api/v1/join-requests/{requestId}:
+    get: { summary: Read a request as its applicant or project owner, security: [{ sessionCookie: [] }], responses: { '200': { description: Join request }, '404': { description: Missing or concealed request } } }
   /api/v1/join-requests/{requestId}:accept:
-    post: { summary: Atomically accept as owner, increment opening capacity, and create membership, security: [{ sessionCookie: [], csrfToken: [], idempotencyKey: [] }], responses: { '200': { description: Membership created }, '409': { description: Capacity, eligibility, duplicate, or concurrent conflict } } }
+    post: { summary: 'Atomically accept as owner, increment opening capacity, and create membership', security: [{ sessionCookie: [], csrfToken: [], idempotencyKey: [] }], responses: { '200': { description: Membership created }, '409': { description: 'Capacity, eligibility, duplicate, or concurrent conflict' } } }
   /api/v1/join-requests/{requestId}:reject:
     post: { summary: Reject a pending request as project owner, security: [{ sessionCookie: [], csrfToken: [], idempotencyKey: [] }], responses: { '200': { description: Request rejected } } }
   /api/v1/join-requests/{requestId}:withdraw:
     post: { summary: Withdraw an own pending request, security: [{ sessionCookie: [], csrfToken: [], idempotencyKey: [] }], responses: { '200': { description: Request withdrawn } } }
   /api/v1/projects/{projectId}/openings/{openingId}/invitations:
-    post: { summary: Invite a server-validated eligible student as project owner, security: [{ sessionCookie: [], csrfToken: [], idempotencyKey: [] }], responses: { '201': { description: Invitation sent }, '409': { description: Duplicate, eligibility, lifecycle, or capacity conflict } } }
+    post: { summary: Invite a server-validated eligible student as project owner, security: [{ sessionCookie: [], csrfToken: [], idempotencyKey: [] }], responses: { '201': { description: Invitation sent }, '409': { description: 'Duplicate, eligibility, lifecycle, or capacity conflict' } } }
   /api/v1/invitations/mine:
     get: { summary: List invitations for the authenticated invitee, security: [{ sessionCookie: [] }], responses: { '200': { description: Private invitation list } } }
+  /api/v1/projects/{projectId}/invitations:
+    get: { summary: List invitations for an owned project, security: [{ sessionCookie: [] }], responses: { '200': { description: Owner invitation list }, '404': { description: Missing or non-owned project } } }
+  /api/v1/invitations/{invitationId}:
+    get: { summary: Read an invitation as its invitee or project owner, security: [{ sessionCookie: [] }], responses: { '200': { description: Invitation }, '404': { description: Missing or concealed invitation } } }
   /api/v1/invitations/{invitationId}:accept:
-    post: { summary: Atomically accept an own pending invitation and create membership, security: [{ sessionCookie: [], csrfToken: [], idempotencyKey: [] }], responses: { '200': { description: Membership created }, '409': { description: Expired, capacity, eligibility, duplicate, or concurrent conflict } } }
+    post: { summary: Atomically accept an own pending invitation and create membership, security: [{ sessionCookie: [], csrfToken: [], idempotencyKey: [] }], responses: { '200': { description: Membership created }, '409': { description: 'Expired, capacity, eligibility, duplicate, or concurrent conflict' } } }
   /api/v1/invitations/{invitationId}:reject:
     post: { summary: Reject an own pending invitation, security: [{ sessionCookie: [], csrfToken: [], idempotencyKey: [] }], responses: { '200': { description: Invitation rejected } } }
   /api/v1/invitations/{invitationId}:revoke:
@@ -203,6 +247,8 @@ paths:
     post: { summary: Leave own active membership and release opening capacity transactionally, security: [{ sessionCookie: [], csrfToken: [], idempotencyKey: [] }], responses: { '200': { description: Membership left } } }
   /api/v1/projects/{projectId}/members/{membershipId}:remove:
     post: { summary: Remove an active member as owner and release capacity transactionally, security: [{ sessionCookie: [], csrfToken: [], idempotencyKey: [] }], responses: { '200': { description: Membership removed } } }
+  /api/v1/projects/{projectId}/invite-candidates:
+    get: { summary: Search eligible non-member invite candidates as project owner, security: [{ sessionCookie: [] }], responses: { '200': { description: Eligible candidates }, '404': { description: Missing or non-owned project } } }
 components:
   securitySchemes:
     sessionCookie: { type: apiKey, in: cookie, name: campuscollab_session }

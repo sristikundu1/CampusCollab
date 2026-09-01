@@ -1,15 +1,263 @@
-import { AlertCircle, ArrowLeft, CheckCircle2, Clock3, History, Pencil, UserRound, XCircle } from 'lucide-react';
-import { useCallback, useEffect, useState } from 'react';
-import { Link, useParams } from 'react-router-dom';
-import { ProposalForm } from '../components/proposals/ProposalForm.jsx';
-import { ProposalStatusBadge } from '../components/proposals/ProposalStatusBadge.jsx';
-import { useAuth } from '../context/auth-context.js';
-import { useToast } from '../context/toast-context.js';
-import { AppShell } from '../layouts/AppShell.jsx';
-import { confirmAction } from '../lib/confirm-action.js';
-import { apiError, proposalApi } from '../services/api.js';
+import {
+  AlertCircle,
+  ArrowLeft,
+  CheckCircle2,
+  Clock3,
+  History,
+  Pencil,
+  UserRound,
+  XCircle,
+} from "lucide-react";
+import { useCallback, useEffect, useState } from "react";
+import { Link, useParams } from "react-router-dom";
+import { ProposalForm } from "../components/proposals/ProposalForm.jsx";
+import { ProposalStatusBadge } from "../components/proposals/ProposalStatusBadge.jsx";
+import { useAuth } from "../context/auth-context.js";
+import { useToast } from "../context/toast-context.js";
+import { AppShell } from "../layouts/AppShell.jsx";
+import { confirmAction } from "../lib/confirm-action.js";
+import { apiError, proposalApi } from "../services/api.js";
 
-const editable=['SUBMITTED','SHORTLISTED'];
-export function ProposalDetailsPage(){const {proposalId}=useParams();const {user}=useAuth();const {notify}=useToast();const [proposal,setProposal]=useState(null);const [loading,setLoading]=useState(true);const [error,setError]=useState('');const [editing,setEditing]=useState(false);const [busy,setBusy]=useState(false);const load=useCallback(async()=>{setLoading(true);try{setProposal((await proposalApi.get(proposalId)).data.data.proposal);setError('')}catch(reason){setError(apiError(reason).status===404?'This proposal is not available to your account.':apiError(reason).message)}finally{setLoading(false)}},[proposalId]);useEffect(()=>{void load()},[load]);if(loading)return <AppShell><div className="h-96 animate-pulse rounded-3xl bg-slate-200"/></AppShell>;if(error)return <AppShell><div className="surface mx-auto max-w-xl p-8 text-center"><AlertCircle className="mx-auto text-rose-600"/><h1 className="mt-3 text-xl font-bold">Proposal unavailable</h1><p className="mt-2 text-slate-600">{error}</p></div></AppShell>;
-  const isApplicant=proposal.applicant.id===user?.id;const update=async(body)=>{setBusy(true);try{setProposal((await proposalApi.update(proposal.id,body)).data.data.proposal);setEditing(false);notify('Proposal revision saved.')}catch(reason){notify(apiError(reason).message,'error')}finally{setBusy(false)}};const withdraw=async()=>{if(!await confirmAction({title:'Withdraw this proposal?',text:'The owner will no longer be able to accept it. This cannot be reversed.',confirmText:'Withdraw proposal',danger:true,icon:'warning'}))return;setBusy(true);try{setProposal((await proposalApi.withdraw(proposal.id,{reasonCode:'APPLICANT_WITHDREW'})).data.data.proposal);notify('Proposal withdrawn.')}catch(reason){notify(apiError(reason).message,'error')}finally{setBusy(false)}};
-  return <AppShell><div className="mx-auto max-w-5xl"><Link className="inline-flex items-center gap-2 text-sm font-bold text-brand-700" to={isApplicant?'/proposals':`/my-gigs/${proposal.gig.id}/proposals`}><ArrowLeft size={16}/>Back to proposals</Link><div className="mt-5 grid gap-6 lg:grid-cols-[minmax(0,1fr)_290px]"><main className="space-y-5"><section className="surface p-6 sm:p-8"><div className="flex flex-wrap items-center justify-between gap-3"><ProposalStatusBadge status={proposal.status}/><span className="text-sm text-slate-500">Revision {proposal.currentRevisionNumber}</span></div><h1 className="mt-5 text-3xl font-black text-slate-950">{proposal.gig.title}</h1><p className="mt-2 text-sm text-slate-500">Proposal by {proposal.applicant.displayName}</p></section>{editing?<section className="surface p-6 sm:p-8"><h2 className="mb-5 text-xl font-black">Revise proposal</h2><ProposalForm initial={proposal.currentRevision} submitLabel="Save revision" busy={busy} onSubmit={update}/></section>:<section className="surface p-6 sm:p-8"><h2 className="text-xl font-black">Cover message</h2><p className="mt-4 whitespace-pre-wrap leading-7 text-slate-600">{proposal.currentRevision.coverMessage}</p><dl className="mt-7 grid gap-4 border-t border-slate-100 pt-6 sm:grid-cols-2"><div><dt className="text-xs font-bold uppercase tracking-wider text-slate-400">Duration</dt><dd className="mt-1 font-semibold">{proposal.currentRevision.proposedDuration||'Not specified'}</dd></div><div><dt className="text-xs font-bold uppercase tracking-wider text-slate-400">Availability</dt><dd className="mt-1 font-semibold">{proposal.currentRevision.availability||'Not specified'}</dd></div></dl></section>}<section className="surface p-6 sm:p-8"><div className="flex items-center gap-2"><History size={19} className="text-brand-600"/><h2 className="text-lg font-black">Revision history</h2></div><div className="mt-4 space-y-3">{proposal.revisions.map((revision)=><details key={revision.id} className="rounded-xl border border-slate-200 p-4" open={revision.revisionNumber===proposal.currentRevisionNumber}><summary className="cursor-pointer font-bold">Revision {revision.revisionNumber} · {new Date(revision.createdAt).toLocaleString()}</summary><p className="mt-3 whitespace-pre-wrap text-sm leading-6 text-slate-600">{revision.coverMessage}</p></details>)}</div></section></main><aside className="h-fit space-y-4 lg:sticky lg:top-24"><section className="surface p-5"><div className="flex items-center gap-3"><span className="grid size-11 place-items-center rounded-xl bg-brand-50 text-brand-700"><UserRound/></span><div><p className="font-black">{proposal.applicant.displayName}</p><p className="text-xs text-slate-500">{proposal.applicant.headline||'CampusCollab student'}</p></div></div>{proposal.applicant.skills?.length>0&&<div className="mt-4 flex flex-wrap gap-2">{proposal.applicant.skills.map((skill)=><span className="rounded-lg bg-slate-100 px-2.5 py-1 text-xs font-bold text-slate-600" key={skill.id}>{skill.name}</span>)}</div>}</section>{isApplicant&&editable.includes(proposal.status)&&<section className="surface space-y-3 p-5"><button className="btn-primary w-full" onClick={()=>setEditing(!editing)}><Pencil size={16}/>{editing?'Cancel editing':'Edit proposal'}</button><button className="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-rose-200 px-4 py-3 text-sm font-bold text-rose-700 hover:bg-rose-50" disabled={busy} onClick={withdraw}><XCircle size={16}/>Withdraw</button></section>}{proposal.status==='ACCEPTED'&&<div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-5 text-sm text-emerald-800"><CheckCircle2 className="mb-2"/><strong>Proposal accepted.</strong><p className="mt-1">Project setup will be available in the next phase.</p></div>}{proposal.status==='SUBMITTED'&&<div className="rounded-2xl border border-blue-200 bg-blue-50 p-5 text-sm text-blue-800"><Clock3 className="mb-2"/>The owner has received your proposal.</div>}</aside></div></div></AppShell>}
+const editable = ["SUBMITTED", "SHORTLISTED"];
+export function ProposalDetailsPage() {
+  const { proposalId } = useParams();
+  const { user } = useAuth();
+  const { notify } = useToast();
+  const [proposal, setProposal] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [editing, setEditing] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const load = useCallback(async () => {
+    setLoading(true);
+    try {
+      setProposal((await proposalApi.get(proposalId)).data.data.proposal);
+      setError("");
+    } catch (reason) {
+      setError(
+        apiError(reason).status === 404
+          ? "This proposal is not available to your account."
+          : apiError(reason).message,
+      );
+    } finally {
+      setLoading(false);
+    }
+  }, [proposalId]);
+  useEffect(() => {
+    void load();
+  }, [load]);
+  if (loading)
+    return (
+      <AppShell>
+        <div className="h-96 animate-pulse rounded-3xl bg-slate-200" />
+      </AppShell>
+    );
+  if (error)
+    return (
+      <AppShell>
+        <div className="surface mx-auto max-w-xl p-8 text-center">
+          <AlertCircle className="mx-auto text-rose-600" />
+          <h1 className="mt-3 text-xl font-bold">Proposal unavailable</h1>
+          <p className="mt-2 text-slate-600">{error}</p>
+        </div>
+      </AppShell>
+    );
+  const isApplicant = proposal.applicant.id === user?.id;
+  const update = async (body) => {
+    setBusy(true);
+    try {
+      setProposal(
+        (await proposalApi.update(proposal.id, body)).data.data.proposal,
+      );
+      setEditing(false);
+      notify("Proposal revision saved.");
+    } catch (reason) {
+      notify(apiError(reason).message, "error");
+    } finally {
+      setBusy(false);
+    }
+  };
+  const withdraw = async () => {
+    if (
+      !(await confirmAction({
+        title: "Withdraw this proposal?",
+        text: "The owner will no longer be able to accept it. This cannot be reversed.",
+        confirmText: "Withdraw proposal",
+        danger: true,
+        icon: "warning",
+      }))
+    )
+      return;
+    setBusy(true);
+    try {
+      setProposal(
+        (
+          await proposalApi.withdraw(proposal.id, {
+            reasonCode: "APPLICANT_WITHDREW",
+          })
+        ).data.data.proposal,
+      );
+      notify("Proposal withdrawn.");
+    } catch (reason) {
+      notify(apiError(reason).message, "error");
+    } finally {
+      setBusy(false);
+    }
+  };
+  return (
+    <AppShell>
+      <div className="mx-auto max-w-5xl">
+        <Link
+          className="inline-flex items-center gap-2 text-sm font-bold text-brand-700"
+          to={
+            isApplicant ? "/proposals" : `/my-gigs/${proposal.gig.id}/proposals`
+          }
+        >
+          <ArrowLeft size={16} />
+          Back to proposals
+        </Link>
+        <div className="mt-5 grid gap-6 lg:grid-cols-[minmax(0,1fr)_290px]">
+          <main className="space-y-5">
+            <section className="surface p-6 sm:p-8">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <ProposalStatusBadge status={proposal.status} />
+                <span className="text-sm text-slate-500">
+                  Revision {proposal.currentRevisionNumber}
+                </span>
+              </div>
+              <h1 className="mt-5 text-3xl font-black text-slate-950">
+                {proposal.gig.title}
+              </h1>
+              <p className="mt-2 text-sm text-slate-500">
+                Proposal by {proposal.applicant.displayName}
+              </p>
+            </section>
+            {editing ? (
+              <section className="surface p-6 sm:p-8">
+                <h2 className="mb-5 text-xl font-black">Revise proposal</h2>
+                <ProposalForm
+                  initial={proposal.currentRevision}
+                  submitLabel="Save revision"
+                  busy={busy}
+                  onSubmit={update}
+                />
+              </section>
+            ) : (
+              <section className="surface p-6 sm:p-8">
+                <h2 className="text-xl font-black">Cover message</h2>
+                <p className="mt-4 whitespace-pre-wrap leading-7 text-slate-600">
+                  {proposal.currentRevision.coverMessage}
+                </p>
+                <dl className="mt-7 grid gap-4 border-t border-slate-100 pt-6 sm:grid-cols-2">
+                  <div>
+                    <dt className="text-xs font-bold uppercase tracking-wider text-slate-400">
+                      Duration
+                    </dt>
+                    <dd className="mt-1 font-semibold">
+                      {proposal.currentRevision.proposedDuration ||
+                        "Not specified"}
+                    </dd>
+                  </div>
+                  <div>
+                    <dt className="text-xs font-bold uppercase tracking-wider text-slate-400">
+                      Availability
+                    </dt>
+                    <dd className="mt-1 font-semibold">
+                      {proposal.currentRevision.availability || "Not specified"}
+                    </dd>
+                  </div>
+                </dl>
+              </section>
+            )}
+            <section className="surface p-6 sm:p-8">
+              <div className="flex items-center gap-2">
+                <History size={19} className="text-brand-600" />
+                <h2 className="text-lg font-black">Revision history</h2>
+              </div>
+              <div className="mt-4 space-y-3">
+                {proposal.revisions.map((revision) => (
+                  <details
+                    key={revision.id}
+                    className="rounded-xl border border-slate-200 p-4"
+                    open={
+                      revision.revisionNumber === proposal.currentRevisionNumber
+                    }
+                  >
+                    <summary className="cursor-pointer font-bold">
+                      Revision {revision.revisionNumber} ·{" "}
+                      {new Date(revision.createdAt).toLocaleString()}
+                    </summary>
+                    <p className="mt-3 whitespace-pre-wrap text-sm leading-6 text-slate-600">
+                      {revision.coverMessage}
+                    </p>
+                  </details>
+                ))}
+              </div>
+            </section>
+          </main>
+          <aside className="h-fit space-y-4 lg:sticky lg:top-24">
+            <section className="surface p-5">
+              <div className="flex items-center gap-3">
+                <span className="grid size-11 place-items-center rounded-xl bg-brand-50 text-brand-700">
+                  <UserRound />
+                </span>
+                <div>
+                  <p className="font-black">{proposal.applicant.displayName}</p>
+                  <p className="text-xs text-slate-500">
+                    {proposal.applicant.headline || "CampusCollab student"}
+                  </p>
+                </div>
+              </div>
+              {proposal.applicant.skills?.length > 0 && (
+                <div className="mt-4 flex flex-wrap gap-2">
+                  {proposal.applicant.skills.map((skill) => (
+                    <span
+                      className="rounded-lg bg-slate-100 px-2.5 py-1 text-xs font-bold text-slate-600"
+                      key={skill.id}
+                    >
+                      {skill.name}
+                    </span>
+                  ))}
+                </div>
+              )}
+            </section>
+            {isApplicant && editable.includes(proposal.status) && (
+              <section className="surface space-y-3 p-5">
+                <button
+                  className="btn-primary w-full"
+                  onClick={() => setEditing(!editing)}
+                >
+                  <Pencil size={16} />
+                  {editing ? "Cancel editing" : "Edit proposal"}
+                </button>
+                <button
+                  className="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-rose-200 px-4 py-3 text-sm font-bold text-rose-700 hover:bg-rose-50"
+                  disabled={busy}
+                  onClick={withdraw}
+                >
+                  <XCircle size={16} />
+                  Withdraw
+                </button>
+              </section>
+            )}
+            {proposal.status === "ACCEPTED" && (
+              <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-5 text-sm text-emerald-800">
+                <CheckCircle2 className="mb-2" />
+                <strong>Proposal accepted.</strong>
+                <p className="mt-1">
+                  Project setup will be available in the next phase.
+                </p>
+              </div>
+            )}
+            {proposal.status === "SUBMITTED" && (
+              <div className="rounded-2xl border border-blue-200 bg-blue-50 p-5 text-sm text-blue-800">
+                <Clock3 className="mb-2" />
+                The owner has received your proposal.
+              </div>
+            )}
+          </aside>
+        </div>
+      </div>
+    </AppShell>
+  );
+}

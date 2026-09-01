@@ -1,22 +1,285 @@
-import { AlertCircle, Plus, Search, SlidersHorizontal } from 'lucide-react';
-import { useCallback, useEffect, useRef, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import { GigCard } from '../components/gigs/GigCard.jsx';
-import { MarketplaceLayout } from '../components/gigs/MarketplaceLayout.jsx';
-import { useAuth } from '../context/auth-context.js';
-import { useToast } from '../context/toast-context.js';
-import { apiError, gigApi, skillApi } from '../services/api.js';
-import { showLoginRequired } from '../lib/confirm-action.js';
+import { AlertCircle, Plus, Search, SlidersHorizontal } from "lucide-react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
+import { GigCard } from "../components/gigs/GigCard.jsx";
+import { MarketplaceLayout } from "../components/gigs/MarketplaceLayout.jsx";
+import { useAuth } from "../context/auth-context.js";
+import { useToast } from "../context/toast-context.js";
+import { apiError, gigApi, skillApi } from "../services/api.js";
+import { showLoginRequired } from "../lib/confirm-action.js";
 
-function CardsSkeleton(){return <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">{[1,2,3,4,5,6].map((item)=><div key={item} className="h-80 animate-pulse rounded-2xl bg-slate-200"/>)}</div>}
-export function GigsPage(){
-  const {isAuthenticated}=useAuth();const {notify}=useToast();const navigate=useNavigate();const [gigs,setGigs]=useState([]);const [skills,setSkills]=useState([]);const [loading,setLoading]=useState(true);const [loadingMore,setLoadingMore]=useState(false);const [error,setError]=useState('');const [pagination,setPagination]=useState({});const [filters,setFilters]=useState({q:'',skillId:'',category:'',workMode:'',sort:'NEWEST'});const [applied,setApplied]=useState(filters);const [busy,setBusy]=useState('');
-  const requestSequence=useRef(0);
-  const load=useCallback(async(cursor,append=false)=>{const requestId=++requestSequence.current;append?setLoadingMore(true):setLoading(true);setError('');try{const activeFilters=Object.fromEntries(Object.entries(applied).filter(([,value])=>value));const response=await gigApi.list({...activeFilters,...(cursor?{cursor}:{})});if(requestId!==requestSequence.current)return;const next=response.data.data.gigs;setGigs((current)=>append?[...current,...next.filter((gig)=>!current.some((item)=>item.id===gig.id))]:next);setPagination(response.data.meta.pagination)}catch(reason){if(requestId===requestSequence.current)setError(apiError(reason).message)}finally{if(requestId===requestSequence.current){setLoading(false);setLoadingMore(false)}}},[applied]);
-  useEffect(()=>{void skillApi.list().then((response)=>setSkills(response.data.data.skills));},[]);useEffect(()=>{void load()},[load]);
-  const submit=(event)=>{event.preventDefault();setApplied({...filters})};
-  const bookmark=async(gig)=>{if(!isAuthenticated){await showLoginRequired();navigate('/login',{state:{from:{pathname:'/gigs'}}});return}setBusy(gig.id);try{gig.isBookmarked?await gigApi.removeBookmark(gig.id):await gigApi.bookmark(gig.id);setGigs((current)=>current.map((item)=>item.id===gig.id?{...item,isBookmarked:!item.isBookmarked}:item));notify(gig.isBookmarked?'Removed from favourites.':'Saved to favourites.')}catch(reason){notify(apiError(reason).message,'error')}finally{setBusy('')}};
-  return <MarketplaceLayout><div><div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-end"><div><p className="eyebrow">Gigs marketplace</p><h1 className="mt-2 text-3xl font-bold text-slate-950">Discover Opportunities</h1><p className="mt-2 max-w-2xl text-slate-600">Find university-focused freelance work and collaborations that match your skills.</p></div>{isAuthenticated?<Link className="btn-primary" to="/gigs/new"><Plus size={18}/>Create Gig</Link>:<Link className="btn-primary" to="/login">Sign in to create</Link>}</div>
-    <form onSubmit={submit} className="surface mt-7 p-4 sm:p-5"><div className="relative"><Search className="absolute left-4 top-3.5 text-slate-400" size={20}/><input aria-label="Search gigs" className="field pl-12" value={filters.q} onChange={(event)=>setFilters({...filters,q:event.target.value})} placeholder="Search titles, descriptions, or categories"/></div><div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-5"><select aria-label="Skill filter" className="field" value={filters.skillId} onChange={(event)=>setFilters({...filters,skillId:event.target.value})}><option value="">All skills</option>{skills.map((skill)=><option key={skill.id} value={skill.id}>{skill.name}</option>)}</select><input aria-label="Category filter" className="field" value={filters.category} onChange={(event)=>setFilters({...filters,category:event.target.value})} placeholder="Any category"/><select aria-label="Work mode filter" className="field" value={filters.workMode} onChange={(event)=>setFilters({...filters,workMode:event.target.value})}><option value="">Any work mode</option><option value="REMOTE">Remote</option><option value="HYBRID">Hybrid</option><option value="ONSITE">On-site</option></select><select aria-label="Sort gigs" className="field" value={filters.sort} onChange={(event)=>setFilters({...filters,sort:event.target.value})}><option value="NEWEST">Newest first</option><option value="DEADLINE">Deadline soon</option></select><button className="btn-primary" type="submit"><SlidersHorizontal size={17}/>Apply filters</button></div></form>
-    <div className="mt-7">{loading?<CardsSkeleton/>:error?<div className="surface p-8 text-center"><AlertCircle className="mx-auto text-rose-600"/><h2 className="mt-3 text-lg font-bold">Could not load opportunities</h2><p className="mt-2 text-slate-600">{error}</p><button className="btn-primary mt-5" onClick={()=>load()}>Try again</button></div>:gigs.length===0?<div className="surface p-10 text-center"><Search className="mx-auto text-slate-400"/><h2 className="mt-4 text-xl font-bold">No opportunities found.</h2><p className="mt-2 text-slate-600">Try a broader search or clear one of your filters.</p><button className="btn-secondary mt-5" onClick={()=>{const reset={q:'',skillId:'',category:'',workMode:'',sort:'NEWEST'};setFilters(reset);setApplied(reset)}}>Clear filters</button></div>:<><div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">{gigs.map((gig)=><GigCard key={gig.id} gig={gig} busy={busy===gig.id} onBookmark={bookmark}/>)}</div>{pagination.hasMore&&<div className="mt-7 text-center"><button disabled={loadingMore} className="btn-secondary" onClick={()=>load(pagination.nextCursor,true)}>{loadingMore?'Loading…':'Load more opportunities'}</button></div>}</>}</div></div></MarketplaceLayout>;
+function CardsSkeleton() {
+  return (
+    <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
+      {[1, 2, 3, 4, 5, 6].map((item) => (
+        <div
+          key={item}
+          className="h-80 animate-pulse rounded-2xl bg-slate-200"
+        />
+      ))}
+    </div>
+  );
+}
+export function GigsPage() {
+  const { isAuthenticated } = useAuth();
+  const { notify } = useToast();
+  const navigate = useNavigate();
+  const [gigs, setGigs] = useState([]);
+  const [skills, setSkills] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [error, setError] = useState("");
+  const [pagination, setPagination] = useState({});
+  const [filters, setFilters] = useState({
+    q: "",
+    skillId: "",
+    category: "",
+    workMode: "",
+    sort: "NEWEST",
+  });
+  const [applied, setApplied] = useState(filters);
+  const [busy, setBusy] = useState("");
+  const requestSequence = useRef(0);
+  const load = useCallback(
+    async (cursor, append = false) => {
+      const requestId = ++requestSequence.current;
+      append ? setLoadingMore(true) : setLoading(true);
+      setError("");
+      try {
+        const activeFilters = Object.fromEntries(
+          Object.entries(applied).filter(([, value]) => value),
+        );
+        const response = await gigApi.list({
+          ...activeFilters,
+          ...(cursor ? { cursor } : {}),
+        });
+        if (requestId !== requestSequence.current) return;
+        const next = response.data.data.gigs;
+        setGigs((current) =>
+          append
+            ? [
+                ...current,
+                ...next.filter(
+                  (gig) => !current.some((item) => item.id === gig.id),
+                ),
+              ]
+            : next,
+        );
+        setPagination(response.data.meta.pagination);
+      } catch (reason) {
+        if (requestId === requestSequence.current)
+          setError(apiError(reason).message);
+      } finally {
+        if (requestId === requestSequence.current) {
+          setLoading(false);
+          setLoadingMore(false);
+        }
+      }
+    },
+    [applied],
+  );
+  useEffect(() => {
+    void skillApi
+      .list()
+      .then((response) => setSkills(response.data.data.skills));
+  }, []);
+  useEffect(() => {
+    void load();
+  }, [load]);
+  const submit = (event) => {
+    event.preventDefault();
+    setApplied({ ...filters });
+  };
+  const bookmark = async (gig) => {
+    if (!isAuthenticated) {
+      await showLoginRequired();
+      navigate("/login", { state: { from: { pathname: "/gigs" } } });
+      return;
+    }
+    setBusy(gig.id);
+    try {
+      gig.isBookmarked
+        ? await gigApi.removeBookmark(gig.id)
+        : await gigApi.bookmark(gig.id);
+      setGigs((current) =>
+        current.map((item) =>
+          item.id === gig.id
+            ? { ...item, isBookmarked: !item.isBookmarked }
+            : item,
+        ),
+      );
+      notify(
+        gig.isBookmarked ? "Removed from favourites." : "Saved to favourites.",
+      );
+    } catch (reason) {
+      notify(apiError(reason).message, "error");
+    } finally {
+      setBusy("");
+    }
+  };
+  return (
+    <MarketplaceLayout>
+      <div>
+        <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
+          <div>
+            <p className="eyebrow">Gigs marketplace</p>
+            <h1 className="mt-2 text-3xl font-bold text-slate-950">
+              Discover Opportunities
+            </h1>
+            <p className="mt-2 max-w-2xl text-slate-600">
+              Find university-focused freelance work and collaborations that
+              match your skills.
+            </p>
+          </div>
+          {isAuthenticated ? (
+            <Link className="btn-primary" to="/gigs/new">
+              <Plus size={18} />
+              Create Gig
+            </Link>
+          ) : (
+            <Link className="btn-primary" to="/login">
+              Sign in to create
+            </Link>
+          )}
+        </div>
+        <form onSubmit={submit} className="surface mt-7 p-4 sm:p-5">
+          <div className="relative">
+            <Search
+              className="absolute left-4 top-3.5 text-slate-400"
+              size={20}
+            />
+            <input
+              aria-label="Search gigs"
+              className="field !pl-12"
+              value={filters.q}
+              onChange={(event) =>
+                setFilters({ ...filters, q: event.target.value })
+              }
+              placeholder="Search titles, descriptions, or categories"
+            />
+          </div>
+          <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+            <select
+              aria-label="Skill filter"
+              className="field"
+              value={filters.skillId}
+              onChange={(event) =>
+                setFilters({ ...filters, skillId: event.target.value })
+              }
+            >
+              <option value="">All skills</option>
+              {skills.map((skill) => (
+                <option key={skill.id} value={skill.id}>
+                  {skill.name}
+                </option>
+              ))}
+            </select>
+            <input
+              aria-label="Category filter"
+              className="field"
+              value={filters.category}
+              onChange={(event) =>
+                setFilters({ ...filters, category: event.target.value })
+              }
+              placeholder="Any category"
+            />
+            <select
+              aria-label="Work mode filter"
+              className="field"
+              value={filters.workMode}
+              onChange={(event) =>
+                setFilters({ ...filters, workMode: event.target.value })
+              }
+            >
+              <option value="">Any work mode</option>
+              <option value="REMOTE">Remote</option>
+              <option value="HYBRID">Hybrid</option>
+              <option value="ONSITE">On-site</option>
+            </select>
+            <select
+              aria-label="Sort gigs"
+              className="field"
+              value={filters.sort}
+              onChange={(event) =>
+                setFilters({ ...filters, sort: event.target.value })
+              }
+            >
+              <option value="NEWEST">Newest first</option>
+              <option value="DEADLINE">Deadline soon</option>
+            </select>
+            <button className="btn-primary" type="submit">
+              <SlidersHorizontal size={17} />
+              Apply filters
+            </button>
+          </div>
+        </form>
+        <div className="mt-7">
+          {loading ? (
+            <CardsSkeleton />
+          ) : error ? (
+            <div className="surface p-8 text-center">
+              <AlertCircle className="mx-auto text-rose-600" />
+              <h2 className="mt-3 text-lg font-bold">
+                Could not load opportunities
+              </h2>
+              <p className="mt-2 text-slate-600">{error}</p>
+              <button className="btn-primary mt-5" onClick={() => load()}>
+                Try again
+              </button>
+            </div>
+          ) : gigs.length === 0 ? (
+            <div className="surface p-10 text-center">
+              <Search className="mx-auto text-slate-400" />
+              <h2 className="mt-4 text-xl font-bold">
+                No opportunities found.
+              </h2>
+              <p className="mt-2 text-slate-600">
+                Try a broader search or clear one of your filters.
+              </p>
+              <button
+                className="btn-secondary mt-5"
+                onClick={() => {
+                  const reset = {
+                    q: "",
+                    skillId: "",
+                    category: "",
+                    workMode: "",
+                    sort: "NEWEST",
+                  };
+                  setFilters(reset);
+                  setApplied(reset);
+                }}
+              >
+                Clear filters
+              </button>
+            </div>
+          ) : (
+            <>
+              <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
+                {gigs.map((gig) => (
+                  <GigCard
+                    key={gig.id}
+                    gig={gig}
+                    busy={busy === gig.id}
+                    onBookmark={bookmark}
+                  />
+                ))}
+              </div>
+              {pagination.hasMore && (
+                <div className="mt-7 text-center">
+                  <button
+                    disabled={loadingMore}
+                    className="btn-secondary"
+                    onClick={() => load(pagination.nextCursor, true)}
+                  >
+                    {loadingMore ? "Loading…" : "Load more opportunities"}
+                  </button>
+                </div>
+              )}
+            </>
+          )}
+        </div>
+      </div>
+    </MarketplaceLayout>
+  );
 }

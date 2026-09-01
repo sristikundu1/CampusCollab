@@ -1,21 +1,21 @@
-import 'dotenv/config';
-import dns from 'node:dns';
-import mongoose from 'mongoose';
-import { parseEnvironment } from '../src/config/env.js';
-import { User } from '../src/modules/auth/user.model.js';
-import { University } from '../src/modules/university/university.model.js';
-import { UniversityDomain } from '../src/modules/university/university-domain.model.js';
+import "dotenv/config";
+import dns from "node:dns";
+import mongoose from "mongoose";
+import { parseEnvironment } from "../src/config/env.js";
+import { User } from "../src/modules/auth/user.model.js";
+import { University } from "../src/modules/university/university.model.js";
+import { UniversityDomain } from "../src/modules/university/university-domain.model.js";
 
-const SYSTEM_EMAIL = 'system.bootstrap@campuscollab.invalid';
+const SYSTEM_EMAIL = "system.bootstrap@campuscollab.invalid";
 const UNIVERSITY = Object.freeze({
-  name: 'United International University',
-  normalizedName: 'united international university',
-  shortName: 'UIU',
-  countryCode: 'BD',
-  region: 'Dhaka',
-  websiteUrl: 'https://www.uiu.ac.bd',
+  name: "United International University",
+  normalizedName: "united international university",
+  shortName: "UIU",
+  countryCode: "BD",
+  region: "Dhaka",
+  websiteUrl: "https://www.uiu.ac.bd",
 });
-const DOMAIN = 'bscse.uiu.ac.bd';
+const DOMAIN = "bscse.uiu.ac.bd";
 
 const config = parseEnvironment();
 if (config.mongodbDnsServers.length) dns.setServers(config.mongodbDnsServers);
@@ -35,24 +35,37 @@ try {
       {
         $setOnInsert: {
           email: SYSTEM_EMAIL,
-          passwordHash: 'disabled-system-account',
-          status: 'DEACTIVATED',
-          primaryExperience: 'OWNING_WORK',
+          passwordHash: "disabled-system-account",
+          status: "DEACTIVATED",
+          primaryExperience: "OWNING_WORK",
           capabilities: [],
           statusChangedAt: new Date(),
-          statusReasonCode: 'SYSTEM_BOOTSTRAP_ACTOR',
+          statusReasonCode: "SYSTEM_BOOTSTRAP_ACTOR",
         },
       },
-      { upsert: true, returnDocument: 'after', session, setDefaultsOnInsert: true },
+      {
+        upsert: true,
+        returnDocument: "after",
+        session,
+        setDefaultsOnInsert: true,
+      },
     );
 
     const university = await University.findOneAndUpdate(
-      { normalizedName: UNIVERSITY.normalizedName, countryCode: UNIVERSITY.countryCode },
       {
-        $set: { ...UNIVERSITY, status: 'ACTIVE', updatedByUserId: actor._id },
+        normalizedName: UNIVERSITY.normalizedName,
+        countryCode: UNIVERSITY.countryCode,
+      },
+      {
+        $set: { ...UNIVERSITY, status: "ACTIVE", updatedByUserId: actor._id },
         $setOnInsert: { createdByUserId: actor._id },
       },
-      { upsert: true, returnDocument: 'after', session, setDefaultsOnInsert: true },
+      {
+        upsert: true,
+        returnDocument: "after",
+        session,
+        setDefaultsOnInsert: true,
+      },
     );
 
     await UniversityDomain.findOneAndUpdate(
@@ -60,23 +73,30 @@ try {
       {
         $set: {
           universityId: university._id,
-          matchMode: 'EXACT',
-          status: 'ACTIVE',
+          matchMode: "EXACT",
+          status: "ACTIVE",
           effectiveAt: new Date(),
           updatedByUserId: actor._id,
         },
         $setOnInsert: {
           createdByUserId: actor._id,
-          evidenceSummary: 'Official UIU BSCSE student email domain.',
+          evidenceSummary: "Official UIU BSCSE student email domain.",
         },
       },
-      { upsert: true, returnDocument: 'after', session, setDefaultsOnInsert: true },
+      {
+        upsert: true,
+        returnDocument: "after",
+        session,
+        setDefaultsOnInsert: true,
+      },
     );
   });
 
-  process.stdout.write(`Seeded ${UNIVERSITY.name} with active domain ${DOMAIN}.\n`);
+  process.stdout.write(
+    `Seeded ${UNIVERSITY.name} with active domain ${DOMAIN}.\n`,
+  );
 } catch (error) {
-  process.stderr.write(`UIU seed failed (${error?.name ?? 'Error'}).\n`);
+  process.stderr.write(`UIU seed failed (${error?.name ?? "Error"}).\n`);
   process.exitCode = 1;
 } finally {
   await session?.endSession();

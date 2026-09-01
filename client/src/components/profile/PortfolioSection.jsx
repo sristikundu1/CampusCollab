@@ -1,25 +1,328 @@
-import { zodResolver } from '@hookform/resolvers/zod';
-import { Code2, ExternalLink, FolderGit2, Pencil, Plus, Trash2, X } from 'lucide-react';
-import { useState } from 'react';
-import { useForm } from 'react-hook-form';
-import { z } from 'zod';
-import { FormField } from '../FormField.jsx';
-import { Spinner } from '../Spinner.jsx';
+import { zodResolver } from "@hookform/resolvers/zod";
+import {
+  Code2,
+  ExternalLink,
+  FolderGit2,
+  Pencil,
+  Plus,
+  Trash2,
+  X,
+} from "lucide-react";
+import { useState } from "react";
+import { useForm } from "react-hook-form";
+import { z } from "zod";
+import { FormField } from "../FormField.jsx";
+import { Spinner } from "../Spinner.jsx";
 
 const Github = Code2;
 
-const optionalUrl = z.union([z.literal(''), z.string().url().refine((value) => value.startsWith('https://'), 'Use an HTTPS URL')]);
-const schema = z.object({ title:z.string().trim().min(1).max(160), description:z.string().trim().min(1).max(3000), role:z.string().trim().max(120), status:z.enum(['DRAFT','PUBLISHED']), startedAt:z.string(), endedAt:z.string(), projectUrl:optionalUrl, repositoryUrl:optionalUrl, skillIds:z.array(z.string()).default([]) }).refine((value)=>!value.startedAt||!value.endedAt||value.endedAt>=value.startedAt,{path:['endedAt'],message:'End date must not precede start date'});
+const optionalUrl = z.union([
+  z.literal(""),
+  z
+    .string()
+    .url()
+    .refine((value) => value.startsWith("https://"), "Use an HTTPS URL"),
+]);
+const schema = z
+  .object({
+    title: z.string().trim().min(1).max(160),
+    description: z.string().trim().min(1).max(3000),
+    role: z.string().trim().max(120),
+    status: z.enum(["DRAFT", "PUBLISHED"]),
+    startedAt: z.string(),
+    endedAt: z.string(),
+    projectUrl: optionalUrl,
+    repositoryUrl: optionalUrl,
+    skillIds: z.array(z.string()).default([]),
+  })
+  .refine(
+    (value) =>
+      !value.startedAt || !value.endedAt || value.endedAt >= value.startedAt,
+    { path: ["endedAt"], message: "End date must not precede start date" },
+  );
 
 function PortfolioForm({ item, catalogue, saving, onCancel, onSubmit }) {
-  const links=Object.fromEntries((item?.externalLinks??[]).map((link)=>[link.type,link.url]));
-  const {register,handleSubmit,formState:{errors}}=useForm({resolver:zodResolver(schema),defaultValues:{title:item?.title??'',description:item?.description??'',role:item?.role??'',status:item?.status==='PUBLISHED'?'PUBLISHED':'DRAFT',startedAt:item?.startedAt?String(item.startedAt).slice(0,10):'',endedAt:item?.endedAt?String(item.endedAt).slice(0,10):'',projectUrl:links.PROJECT??links.DEMO??'',repositoryUrl:links.REPOSITORY??'',skillIds:item?.skillIds??[]}});
-  const submit=(values)=>onSubmit({title:values.title,description:values.description,role:values.role,status:values.status,skillIds:values.skillIds,startedAt:values.startedAt?new Date(`${values.startedAt}T00:00:00.000Z`).toISOString():null,endedAt:values.endedAt?new Date(`${values.endedAt}T00:00:00.000Z`).toISOString():null,externalLinks:[values.projectUrl&&{type:'PROJECT',url:values.projectUrl,label:'Live project'},values.repositoryUrl&&{type:'REPOSITORY',url:values.repositoryUrl,label:'Source code'}].filter(Boolean)});
-  return <form className="mt-5 space-y-4 rounded-2xl border border-brand-100 bg-brand-50/40 p-5" onSubmit={handleSubmit(submit)} noValidate><div className="flex items-center justify-between"><h3 className="font-bold">{item?'Edit project':'Add a project'}</h3><button type="button" onClick={onCancel} aria-label="Close portfolio form"><X size={18}/></button></div><div className="grid gap-4 sm:grid-cols-2"><FormField label="Project title" error={errors.title?.message} {...register('title')}/><FormField label="Your role" placeholder="Frontend developer" error={errors.role?.message} {...register('role')}/></div><label className="block"><span className="mb-2 block text-sm font-semibold">Description</span><textarea className="field min-h-28" {...register('description')}/>{errors.description&&<span className="text-xs text-rose-600">{errors.description.message}</span>}</label><div className="grid gap-4 sm:grid-cols-2"><FormField label="Started" type="date" {...register('startedAt')}/><FormField label="Ended" type="date" error={errors.endedAt?.message} {...register('endedAt')}/><FormField label="Project URL" placeholder="https://..." error={errors.projectUrl?.message} {...register('projectUrl')}/><FormField label="Repository URL" placeholder="https://github.com/..." error={errors.repositoryUrl?.message} {...register('repositoryUrl')}/></div><div><span className="mb-2 block text-sm font-semibold">Technologies</span><div className="grid max-h-36 gap-2 overflow-y-auto rounded-xl border border-slate-200 bg-white p-3 sm:grid-cols-2">{catalogue.map((skill)=><label key={skill.id} className="flex items-center gap-2 text-sm"><input type="checkbox" value={skill.id} {...register('skillIds')} className="accent-brand-600"/>{skill.name}</label>)}</div></div><label className="block"><span className="mb-2 block text-sm font-semibold">Visibility</span><select className="field" {...register('status')}><option value="DRAFT">Draft — only me</option><option value="PUBLISHED">Published — visible on profile</option></select></label><div className="flex justify-end gap-3"><button type="button" className="btn-secondary" onClick={onCancel}>Cancel</button><button className="btn-primary" disabled={saving}>{saving?<Spinner label="Saving"/>:item?'Save project':'Add project'}</button></div></form>;
+  const links = Object.fromEntries(
+    (item?.externalLinks ?? []).map((link) => [link.type, link.url]),
+  );
+  const {
+    register,
+    handleSubmit,
+    formState: { errors },
+  } = useForm({
+    resolver: zodResolver(schema),
+    defaultValues: {
+      title: item?.title ?? "",
+      description: item?.description ?? "",
+      role: item?.role ?? "",
+      status: item?.status === "PUBLISHED" ? "PUBLISHED" : "DRAFT",
+      startedAt: item?.startedAt ? String(item.startedAt).slice(0, 10) : "",
+      endedAt: item?.endedAt ? String(item.endedAt).slice(0, 10) : "",
+      projectUrl: links.PROJECT ?? links.DEMO ?? "",
+      repositoryUrl: links.REPOSITORY ?? "",
+      skillIds: item?.skillIds ?? [],
+    },
+  });
+  const submit = (values) =>
+    onSubmit({
+      title: values.title,
+      description: values.description,
+      role: values.role,
+      status: values.status,
+      skillIds: values.skillIds,
+      startedAt: values.startedAt
+        ? new Date(`${values.startedAt}T00:00:00.000Z`).toISOString()
+        : null,
+      endedAt: values.endedAt
+        ? new Date(`${values.endedAt}T00:00:00.000Z`).toISOString()
+        : null,
+      externalLinks: [
+        values.projectUrl && {
+          type: "PROJECT",
+          url: values.projectUrl,
+          label: "Live project",
+        },
+        values.repositoryUrl && {
+          type: "REPOSITORY",
+          url: values.repositoryUrl,
+          label: "Source code",
+        },
+      ].filter(Boolean),
+    });
+  return (
+    <form
+      className="mt-5 space-y-4 rounded-2xl border border-brand-100 bg-brand-50/40 p-5"
+      onSubmit={handleSubmit(submit)}
+      noValidate
+    >
+      <div className="flex items-center justify-between">
+        <h3 className="font-bold">{item ? "Edit project" : "Add a project"}</h3>
+        <button
+          type="button"
+          onClick={onCancel}
+          aria-label="Close portfolio form"
+        >
+          <X size={18} />
+        </button>
+      </div>
+      <div className="grid gap-4 sm:grid-cols-2">
+        <FormField
+          label="Project title"
+          error={errors.title?.message}
+          {...register("title")}
+        />
+        <FormField
+          label="Your role"
+          placeholder="Frontend developer"
+          error={errors.role?.message}
+          {...register("role")}
+        />
+      </div>
+      <label className="block">
+        <span className="mb-2 block text-sm font-semibold">Description</span>
+        <textarea className="field min-h-28" {...register("description")} />
+        {errors.description && (
+          <span className="text-xs text-rose-600">
+            {errors.description.message}
+          </span>
+        )}
+      </label>
+      <div className="grid gap-4 sm:grid-cols-2">
+        <FormField label="Started" type="date" {...register("startedAt")} />
+        <FormField
+          label="Ended"
+          type="date"
+          error={errors.endedAt?.message}
+          {...register("endedAt")}
+        />
+        <FormField
+          label="Project URL"
+          placeholder="https://..."
+          error={errors.projectUrl?.message}
+          {...register("projectUrl")}
+        />
+        <FormField
+          label="Repository URL"
+          placeholder="https://github.com/..."
+          error={errors.repositoryUrl?.message}
+          {...register("repositoryUrl")}
+        />
+      </div>
+      <div>
+        <span className="mb-2 block text-sm font-semibold">Technologies</span>
+        <div className="grid max-h-36 gap-2 overflow-y-auto rounded-xl border border-slate-200 bg-white p-3 sm:grid-cols-2">
+          {catalogue.map((skill) => (
+            <label key={skill.id} className="flex items-center gap-2 text-sm">
+              <input
+                type="checkbox"
+                value={skill.id}
+                {...register("skillIds")}
+                className="accent-brand-600"
+              />
+              {skill.name}
+            </label>
+          ))}
+        </div>
+      </div>
+      <label className="block">
+        <span className="mb-2 block text-sm font-semibold">Visibility</span>
+        <select className="field" {...register("status")}>
+          <option value="DRAFT">Draft — only me</option>
+          <option value="PUBLISHED">Published — visible on profile</option>
+        </select>
+      </label>
+      <div className="flex justify-end gap-3">
+        <button type="button" className="btn-secondary" onClick={onCancel}>
+          Cancel
+        </button>
+        <button className="btn-primary" disabled={saving}>
+          {saving ? (
+            <Spinner label="Saving" />
+          ) : item ? (
+            "Save project"
+          ) : (
+            "Add project"
+          )}
+        </button>
+      </div>
+    </form>
+  );
 }
 
-export function PortfolioSection({ items, catalogue, saving, onCreate, onUpdate, onDelete }) {
-  const [editing,setEditing]=useState(null); const [showForm,setShowForm]=useState(false);
-  const submit=async(payload)=>{if(editing)await onUpdate(editing.id,payload);else await onCreate(payload);setEditing(null);setShowForm(false)};
-  return <section className="surface p-6"><div className="flex flex-wrap items-start justify-between gap-3"><div><p className="eyebrow">Portfolio</p><h2 className="mt-1 text-xl font-bold">Work you’re proud of</h2></div><button className="btn-primary" onClick={()=>{setEditing(null);setShowForm(true)}}><Plus size={17}/> Add project</button></div>{showForm&&<PortfolioForm item={editing} catalogue={catalogue} saving={saving} onCancel={()=>{setShowForm(false);setEditing(null)}} onSubmit={submit}/>}<div className="mt-5 grid gap-4 md:grid-cols-2">{items.map((item)=><article key={item.id} className="rounded-2xl border border-slate-200 bg-white p-5"><div className="flex items-start justify-between gap-3"><span className="grid size-11 place-items-center rounded-xl bg-violet-50 text-violet-600"><FolderGit2 size={21}/></span><span className={`rounded-full px-2.5 py-1 text-xs font-bold ${item.status==='PUBLISHED'?'bg-emerald-50 text-emerald-700':'bg-amber-50 text-amber-700'}`}>{item.status.toLowerCase()}</span></div><h3 className="mt-4 text-lg font-bold">{item.title}</h3>{item.role&&<p className="mt-1 text-sm font-semibold text-brand-600">{item.role}</p>}<p className="mt-3 line-clamp-3 text-sm leading-6 text-slate-600">{item.description}</p><div className="mt-4 flex flex-wrap gap-2">{item.skillIds.map((id)=><span key={id} className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold">{catalogue.find((skill)=>skill.id===id)?.name??'Skill'}</span>)}</div><div className="mt-4 flex flex-wrap gap-3">{item.externalLinks.map((link)=><a key={`${link.type}-${link.url}`} href={link.url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-sm font-bold text-brand-600">{link.type==='REPOSITORY'?<Github size={15}/>:<ExternalLink size={15}/>} {link.label||link.type}</a>)}</div><div className="mt-5 flex gap-2 border-t border-slate-100 pt-4"><button className="btn-secondary flex-1" onClick={()=>{setEditing(item);setShowForm(true)}}><Pencil size={15}/> Edit</button><button aria-label={`Delete ${item.title}`} className="rounded-xl border border-rose-200 px-3 text-rose-600 hover:bg-rose-50" onClick={()=>onDelete(item.id)}><Trash2 size={17}/></button></div></article>)}</div>{!items.length&&!showForm&&<div className="mt-5 rounded-2xl border border-dashed border-slate-300 p-10 text-center"><FolderGit2 className="mx-auto text-slate-400"/><p className="mt-3 font-bold">No portfolio projects yet.</p><p className="mt-1 text-sm text-slate-500">Add your first project to show collaborators what you can build.</p><button className="btn-secondary mt-5" onClick={()=>setShowForm(true)}>Add your first project</button></div>}</section>;
+export function PortfolioSection({
+  items,
+  catalogue,
+  saving,
+  onCreate,
+  onUpdate,
+  onDelete,
+}) {
+  const [editing, setEditing] = useState(null);
+  const [showForm, setShowForm] = useState(false);
+  const submit = async (payload) => {
+    if (editing) await onUpdate(editing.id, payload);
+    else await onCreate(payload);
+    setEditing(null);
+    setShowForm(false);
+  };
+  return (
+    <section className="surface p-6">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <p className="eyebrow">Portfolio</p>
+          <h2 className="mt-1 text-xl font-bold">Work you’re proud of</h2>
+        </div>
+        <button
+          className="btn-primary"
+          onClick={() => {
+            setEditing(null);
+            setShowForm(true);
+          }}
+        >
+          <Plus size={17} /> Add project
+        </button>
+      </div>
+      {showForm && (
+        <PortfolioForm
+          item={editing}
+          catalogue={catalogue}
+          saving={saving}
+          onCancel={() => {
+            setShowForm(false);
+            setEditing(null);
+          }}
+          onSubmit={submit}
+        />
+      )}
+      <div className="mt-5 grid gap-4 md:grid-cols-2">
+        {items.map((item) => (
+          <article
+            key={item.id}
+            className="rounded-2xl border border-slate-200 bg-white p-5"
+          >
+            <div className="flex items-start justify-between gap-3">
+              <span className="grid size-11 place-items-center rounded-xl bg-violet-50 text-violet-600">
+                <FolderGit2 size={21} />
+              </span>
+              <span
+                className={`rounded-full px-2.5 py-1 text-xs font-bold ${item.status === "PUBLISHED" ? "bg-emerald-50 text-emerald-700" : "bg-amber-50 text-amber-700"}`}
+              >
+                {item.status.toLowerCase()}
+              </span>
+            </div>
+            <h3 className="mt-4 text-lg font-bold">{item.title}</h3>
+            {item.role && (
+              <p className="mt-1 text-sm font-semibold text-brand-600">
+                {item.role}
+              </p>
+            )}
+            <p className="mt-3 line-clamp-3 text-sm leading-6 text-slate-600">
+              {item.description}
+            </p>
+            <div className="mt-4 flex flex-wrap gap-2">
+              {item.skillIds.map((id) => (
+                <span
+                  key={id}
+                  className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold"
+                >
+                  {catalogue.find((skill) => skill.id === id)?.name ?? "Skill"}
+                </span>
+              ))}
+            </div>
+            <div className="mt-4 flex flex-wrap gap-3">
+              {item.externalLinks.map((link) => (
+                <a
+                  key={`${link.type}-${link.url}`}
+                  href={link.url}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="inline-flex items-center gap-1 text-sm font-bold text-brand-600"
+                >
+                  {link.type === "REPOSITORY" ? (
+                    <Github size={15} />
+                  ) : (
+                    <ExternalLink size={15} />
+                  )}{" "}
+                  {link.label || link.type}
+                </a>
+              ))}
+            </div>
+            <div className="mt-5 flex gap-2 border-t border-slate-100 pt-4">
+              <button
+                className="btn-secondary flex-1"
+                onClick={() => {
+                  setEditing(item);
+                  setShowForm(true);
+                }}
+              >
+                <Pencil size={15} /> Edit
+              </button>
+              <button
+                aria-label={`Delete ${item.title}`}
+                className="rounded-xl border border-rose-200 px-3 text-rose-600 hover:bg-rose-50"
+                onClick={() => onDelete(item.id)}
+              >
+                <Trash2 size={17} />
+              </button>
+            </div>
+          </article>
+        ))}
+      </div>
+      {!items.length && !showForm && (
+        <div className="mt-5 rounded-2xl border border-dashed border-slate-300 p-10 text-center">
+          <FolderGit2 className="mx-auto text-slate-400" />
+          <p className="mt-3 font-bold">No portfolio projects yet.</p>
+          <p className="mt-1 text-sm text-slate-500">
+            Add your first project to show collaborators what you can build.
+          </p>
+          <button
+            className="btn-secondary mt-5"
+            onClick={() => setShowForm(true)}
+          >
+            Add your first project
+          </button>
+        </div>
+      )}
+    </section>
+  );
 }

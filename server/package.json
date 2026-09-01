@@ -12,6 +12,7 @@
     "start": "node src/server.js",
     "test": "node --test --test-concurrency=1",
     "test:unit": "node --test --test-concurrency=1 tests/unit",
+    "format:check": "prettier --check \"src/**/*.js\" \"tests/**/*.js\" \"scripts/**/*.js\" \"api/**/*.js\"",
     "test:smoke:profile": "node scripts/smoke-profile-api.js",
     "test:smoke:gigs": "node scripts/smoke-gigs-api.js",
     "test:smoke:projects": "node scripts/smoke-projects-api.js",
@@ -30,6 +31,11 @@
     "mongoose": "^9.9.4",
     "nodemailer": "^9.0.6",
     "pino": "^10.3.1",
+    "rate-limit-redis": "^4.3.1",
+    "redis": "^5.12.1",
     "zod": "^4.4.3"
+  },
+  "devDependencies": {
+    "prettier": "^3.9.6"
   }
 }

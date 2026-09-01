@@ -1,3 +1,38 @@
-import { cloneElement } from 'react';
+import { cloneElement } from "react";
 
-export function FormField({ label, error, hint, children, ...props }) { const id = props.id || props.name || children?.props?.name; const control=children?cloneElement(children,{id:children.props.id||id,'aria-invalid':Boolean(error),'aria-describedby':error?`${id}-error`:undefined}):<input id={id} className="field" aria-invalid={Boolean(error)} aria-describedby={error ? `${id}-error` : undefined} {...props}/>;return <label htmlFor={id} className="block"><span className="mb-2 block text-sm font-semibold text-slate-700">{label}</span>{control} {error ? <span id={`${id}-error`} className="mt-1.5 block text-xs font-medium text-rose-600">{error}</span> : hint ? <span className="mt-1.5 block text-xs text-slate-500">{hint}</span> : null}</label>; }
+export function FormField({ label, error, hint, children, ...props }) {
+  const id = props.id || props.name || children?.props?.name;
+  const control = children ? (
+    cloneElement(children, {
+      id: children.props.id || id,
+      "aria-invalid": Boolean(error),
+      "aria-describedby": error ? `${id}-error` : undefined,
+    })
+  ) : (
+    <input
+      id={id}
+      className="field"
+      aria-invalid={Boolean(error)}
+      aria-describedby={error ? `${id}-error` : undefined}
+      {...props}
+    />
+  );
+  return (
+    <label htmlFor={id} className="block">
+      <span className="mb-2 block text-sm font-semibold text-slate-700">
+        {label}
+      </span>
+      {control}{" "}
+      {error ? (
+        <span
+          id={`${id}-error`}
+          className="mt-1.5 block text-xs font-medium text-rose-600"
+        >
+          {error}
+        </span>
+      ) : hint ? (
+        <span className="mt-1.5 block text-xs text-slate-500">{hint}</span>
+      ) : null}
+    </label>
+  );
+}

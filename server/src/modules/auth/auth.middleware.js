@@ -1,10 +1,13 @@
-import { AuthenticationError, AuthorizationError } from '../../errors/application-error.js';
-import { opaqueTokenMatches } from '../../lib/crypto/opaque-token.js';
+import {
+  AuthenticationError,
+  AuthorizationError,
+} from "../../errors/application-error.js";
+import { opaqueTokenMatches } from "../../lib/crypto/opaque-token.js";
 
 function readCookie(header, name) {
-  for (const part of String(header ?? '').split(';')) {
-    const [key, ...rest] = part.trim().split('=');
-    if (key === name) return decodeURIComponent(rest.join('='));
+  for (const part of String(header ?? "").split(";")) {
+    const [key, ...rest] = part.trim().split("=");
+    if (key === name) return decodeURIComponent(rest.join("="));
   }
   return null;
 }
@@ -12,24 +15,49 @@ function readCookie(header, name) {
 export function createAuthenticationMiddleware({ config, authService }) {
   async function authenticate(request, _response, next) {
     try {
-      request.rawSessionToken = readCookie(request.headers.cookie, config.sessionCookieName);
+      request.rawSessionToken = readCookie(
+        request.headers.cookie,
+        config.sessionCookieName,
+      );
       const principal = await authService.authenticate(request.rawSessionToken);
       request.auth = principal;
       next();
-    } catch (error) { next(error); }
+    } catch (error) {
+      next(error);
+    }
   }
   async function optionalAuthenticate(request, _response, next) {
     try {
-      request.rawSessionToken = readCookie(request.headers.cookie, config.sessionCookieName);
+      request.rawSessionToken = readCookie(
+        request.headers.cookie,
+        config.sessionCookieName,
+      );
       if (!request.rawSessionToken) return next();
       request.auth = await authService.authenticate(request.rawSessionToken);
       return next();
-    } catch (error) { return next(error); }
+    } catch (error) {
+      return next(error);
+    }
   }
   function requireCsrf(request, _response, next) {
-    if (!config.csrfSecret) return next(new AuthenticationError('CSRF_NOT_CONFIGURED', 'Request security is not configured.'));
-    const supplied = request.get('x-csrf-token');
-    if (!supplied || !opaqueTokenMatches(request.rawSessionToken, supplied, config.csrfSecret)) return next(new AuthorizationError('CSRF_VALIDATION_FAILED', 'Request security validation failed.'));
+    if (!config.csrfSecret)
+      return next(
+        new AuthenticationError(
+          "CSRF_NOT_CONFIGURED",
+          "Request security is not configured.",
+        ),
+      );
+    const supplied = request.get("x-csrf-token");
+    if (
+      !supplied ||
+      !opaqueTokenMatches(request.rawSessionToken, supplied, config.csrfSecret)
+    )
+      return next(
+        new AuthorizationError(
+          "CSRF_VALIDATION_FAILED",
+          "Request security validation failed.",
+        ),
+      );
     return next();
   }
   return { authenticate, optionalAuthenticate, requireCsrf };

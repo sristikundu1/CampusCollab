@@ -1,40 +1,688 @@
-import { AuthorizationError, ConflictError, NotFoundError } from '../../errors/application-error.js';
-import { createCursorCodec } from '../../lib/pagination/cursor.js';
-import { AuditEvent } from '../audit/audit-event.model.js';
-import { OutboxEvent } from '../audit/outbox-event.model.js';
-import { User } from '../auth/user.model.js';
-import { ProjectMembership } from '../participation/project-membership.model.js';
-import { Invitation } from '../participation/invitation.model.js';
-import { JoinRequest } from '../participation/join-request.model.js';
-import { Profile } from '../profiles/profile.model.js';
-import { Skill } from '../skills/skill.model.js';
-import { UniversityAffiliation } from '../university/university-affiliation.model.js';
-import { Project } from './project.model.js';
-import { editableProjectStates, recruitmentStates, targetProjectState } from './project-lifecycle.js';
+import {
+  AuthorizationError,
+  ConflictError,
+  NotFoundError,
+} from "../../errors/application-error.js";
+import { createCursorCodec } from "../../lib/pagination/cursor.js";
+import { withTransaction } from "../../lib/mongo/transaction.js";
+import { AuditEvent } from "../audit/audit-event.model.js";
+import { OutboxEvent } from "../audit/outbox-event.model.js";
+import { User } from "../auth/user.model.js";
+import { ProjectMembership } from "../participation/project-membership.model.js";
+import { Invitation } from "../participation/invitation.model.js";
+import { JoinRequest } from "../participation/join-request.model.js";
+import { Profile } from "../profiles/profile.model.js";
+import { Skill } from "../skills/skill.model.js";
+import { UniversityAffiliation } from "../university/university-affiliation.model.js";
+import { Project } from "./project.model.js";
+import {
+  editableProjectStates,
+  recruitmentStates,
+  targetProjectState,
+} from "./project-lifecycle.js";
 
-const q=async(query,{lean=false,session}={})=>{let value=query;if(session&&value?.session)value=value.session(session);if(lean&&value?.lean)value=value.lean();return value};
-const escape=(value)=>value.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
+const q = async (query, { lean = false, session } = {}) => {
+  let value = query;
+  if (session && value?.session) value = value.session(session);
+  if (lean && value?.lean) value = value.lean();
+  return value;
+};
+const escape = (value) => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
-export function createProjectService({config,ProjectModel=Project,MembershipModel=ProjectMembership,JoinModel=JoinRequest,InvitationModel=Invitation,UserModel=User,ProfileModel=Profile,SkillModel=Skill,AffiliationModel=UniversityAffiliation,AuditModel=AuditEvent,OutboxModel=OutboxEvent}={}){
-  const codec=createCursorCodec(config.csrfSecret);
-  async function eligible(userId){const user=await q(UserModel.findById(userId));const profile=await q(ProfileModel.findOne({userId,moderationStatus:'VISIBLE'}));const affiliation=await q(AffiliationModel.findOne({userId,isActive:true}));if(!user||user.status!=='ACTIVE'||!user.capabilities?.includes('STUDENT'))throw new AuthorizationError('PROJECT_OWNER_NOT_ELIGIBLE','This account cannot manage projects.');if(!profile)throw new ConflictError('PROFILE_REQUIRED','Create your profile before creating a project.');if(!affiliation||(config.requireEmailVerification&&affiliation.status!=='VERIFIED'))throw new AuthorizationError('UNIVERSITY_ACCESS_REQUIRED','A current university affiliation is required.');return{profile,affiliation}}
-  async function validateSkills(ids){if(!ids?.length)return;const count=await SkillModel.countDocuments({_id:{$in:ids},status:'ACTIVE'});if(count!==new Set(ids).size)throw new ConflictError('INVALID_SKILL','One or more selected skills are unavailable.')}
-  async function record(project,actorId,eventName,action,requestId,payload={}){const now=new Date();if(AuditModel)await AuditModel.create({eventName,category:'LIFECYCLE',actorType:'USER',actorId,targetType:'PROJECT',targetId:project._id,action,result:'SUCCESS',correlationId:requestId,metadata:payload,occurredAt:now});if(OutboxModel)await OutboxModel.create({eventName,aggregateType:'PROJECT',aggregateId:project._id,aggregateVersion:project.version,payload:{projectId:String(project._id),actorId:String(actorId),...payload},availableAt:now})}
-  async function skillsFor(projects){const ids=[...new Set(projects.flatMap((p)=>[...(p.requiredSkillIds??[]),...(p.openings??[]).flatMap((o)=>o.requiredSkillIds??[])]).map(String))];const rows=ids.length?await q(SkillModel.find({_id:{$in:ids}}),{lean:true}):[];return new Map(rows.map((s)=>[String(s._id),{id:String(s._id),name:s.name,category:s.category}]))}
-  async function view(projects,viewerId){const skillMap=await skillsFor(projects);const memberProjects=new Set();if(viewerId){const rows=await q(MembershipModel.find({userId:viewerId,status:'ACTIVE'}).select('projectId'),{lean:true});rows.forEach((m)=>memberProjects.add(String(m.projectId)))}return projects.map((p)=>({id:String(p._id),title:p.title,description:p.description,projectType:p.projectType,skills:(p.requiredSkillIds??[]).map((id)=>skillMap.get(String(id))).filter(Boolean),visibility:p.visibility,expectedStartAt:p.expectedStartAt??null,expectedEndAt:p.expectedEndAt??null,openings:(p.openings??[]).map((o)=>({id:String(o._id),roleName:o.roleName,description:o.description,skills:(o.requiredSkillIds??[]).map((id)=>skillMap.get(String(id))).filter(Boolean),capacity:o.capacity,filledCount:o.filledCount,status:o.status,remainingCapacity:Math.max(0,o.capacity-o.filledCount)})),acceptingMembers:p.acceptingMembers,status:p.status,owner:{id:String(p.ownerId),displayName:p.ownerSnapshot?.displayName??'CampusCollab member'},isOwner:String(p.ownerId)===String(viewerId),isMember:memberProjects.has(String(p._id)),createdAt:p.createdAt,updatedAt:p.updatedAt,version:p.version}))}
-  async function create(userId,input,context){const {profile,affiliation}=await eligible(userId);await validateSkills([...input.requiredSkillIds,...input.openings.flatMap((o)=>o.requiredSkillIds)]);const project=await ProjectModel.create({...input,ownerId:userId,ownerSnapshot:{displayName:profile.displayName,universityId:affiliation.universityId},universityId:input.visibility==='UNIVERSITY'?affiliation.universityId:undefined,status:'DRAFT',acceptingMembers:false});await record(project,userId,'PROJECT_CREATED','CREATE',context.requestId);return(await view([project.toObject()],userId))[0]}
-  function cursorFilter(cursor,scope,direction){const decoded=codec.decode(cursor,scope);if(!decoded)return{};const op=direction===1?'$gt':'$lt';return{$or:[{createdAt:{[op]:new Date(decoded.at)}},{createdAt:new Date(decoded.at),_id:{[op]:decoded.id}}]}}
-  async function paged(filter,input,scope,viewerId){const direction=input.sort==='OLDEST'?1:-1;const rows=await q(ProjectModel.find({...filter,...cursorFilter(input.cursor,scope,direction)}).sort({createdAt:direction,_id:direction}).limit(input.limit+1),{lean:true});const hasMore=rows.length>input.limit;const values=hasMore?rows.slice(0,input.limit):rows;const last=values.at(-1);return{projects:await view(values,viewerId),hasMore,nextCursor:hasMore?codec.encode({scope,at:new Date(last.createdAt).toISOString(),id:String(last._id)}):null}}
-  async function list(input,viewerId){const filter={status:{$in:['RECRUITING','ACTIVE']},moderationStatus:'VISIBLE'};const scopes=[{visibility:'PLATFORM'}];if(viewerId){const affiliation=await q(AffiliationModel.findOne({userId:viewerId,isActive:true}),{lean:true});if(affiliation)scopes.push({visibility:'UNIVERSITY',universityId:affiliation.universityId})}filter.$or=scopes;if(input.q)filter.$or=[...scopes.map((scope)=>({...scope,$or:[{title:{$regex:escape(input.q),$options:'i'}},{description:{$regex:escape(input.q),$options:'i'}}]}))];if(input.projectType)filter.projectType=input.projectType;if(input.skillId)filter.$and=[{$or:[{requiredSkillIds:input.skillId},{'openings.requiredSkillIds':input.skillId}]}];return paged(filter,input,`project-list:${viewerId??'public'}:${input.q??''}:${input.projectType??''}:${input.skillId??''}:${input.sort}`,viewerId)}
-  async function mine(userId,input){const membershipRows=await q(MembershipModel.find({userId,status:'ACTIVE'}).select('projectId'),{lean:true});const ids=membershipRows.map((m)=>m.projectId);const filter={$or:[{ownerId:userId},{_id:{$in:ids}}]};if(input.status)filter.status=input.status;return paged(filter,input,`project-mine:${userId}:${input.status??''}:${input.sort}`,userId)}
-  async function get(projectId,viewerId){const project=await q(ProjectModel.findById(projectId),{lean:true});if(!project||project.moderationStatus!=='VISIBLE')throw new NotFoundError();const owner=String(project.ownerId)===String(viewerId);const membership=viewerId?await q(MembershipModel.findOne({projectId,userId:viewerId,status:'ACTIVE'}),{lean:true}):null;if(project.visibility==='PRIVATE'&&!owner&&!membership)throw new NotFoundError();if(project.visibility==='UNIVERSITY'&&!owner&&!membership){if(!viewerId)throw new NotFoundError();const affiliation=await q(AffiliationModel.findOne({userId:viewerId,isActive:true}),{lean:true});if(!affiliation||String(affiliation.universityId)!==String(project.universityId))throw new NotFoundError()}if(['DRAFT','ARCHIVED'].includes(project.status)&&!owner&&!membership)throw new NotFoundError();const base=(await view([project],viewerId))[0];const memberships=await q(MembershipModel.find({projectId,status:'ACTIVE'}),{lean:true});const memberProfiles=memberships.length?await q(ProfileModel.find({userId:{$in:memberships.map((m)=>m.userId)},moderationStatus:'VISIBLE',visibility:{$ne:'PRIVATE'}}),{lean:true}):[];const profileMap=new Map(memberProfiles.map((p)=>[String(p.userId),p]));return{...base,membershipId:membership?String(membership._id):null,members:[{id:String(project.ownerId),displayName:project.ownerSnapshot?.displayName??'Project owner',role:'Project owner',isOwner:true},...memberships.map((m)=>({id:String(m.userId),displayName:profileMap.get(String(m.userId))?.displayName??'CampusCollab member',headline:profileMap.get(String(m.userId))?.headline??'',role:m.roleSnapshot.roleName,isOwner:false}))]}}
-  async function owned(userId,projectId){const project=await q(ProjectModel.findOne({_id:projectId,ownerId:userId}));if(!project)throw new NotFoundError();return project}
-  async function update(userId,projectId,input,context){const project=await owned(userId,projectId);if(!editableProjectStates.includes(project.status))throw new ConflictError('INVALID_STATE','Only draft or recruiting projects can be edited.');await validateSkills(input.requiredSkillIds);if(input.expectedStartAt&&input.expectedEndAt&&input.expectedEndAt<=input.expectedStartAt)throw new ConflictError('INVALID_DATES','End date must be after start date.');Object.assign(project,input);if(input.visibility)project.universityId=input.visibility==='UNIVERSITY'?project.ownerSnapshot.universityId:undefined;project.materialRevision+=1;await project.save();await record(project,userId,'PROJECT_UPDATED','UPDATE',context.requestId);return get(projectId,userId)}
-  async function publish(userId,projectId,context){const project=await owned(userId,projectId);targetProjectState(project.status,'RECRUITING');if(!project.openings.length)throw new ConflictError('PROJECT_INCOMPLETE','Add at least one opening before publishing.');if(!project.openings.some((o)=>o.status==='OPEN'&&o.capacity>o.filledCount))throw new ConflictError('PROJECT_INCOMPLETE','At least one opening must have available capacity.');project.status='RECRUITING';project.acceptingMembers=true;project.publishedAt=new Date();project.materialRevision+=1;await project.save();await record(project,userId,'PROJECT_PUBLISHED','PUBLISH',context.requestId);return get(projectId,userId)}
-  async function transition(userId,projectId,input,context){const project=await owned(userId,projectId);const target=input.toStatus;if(!target)throw new ConflictError('TARGET_STATUS_REQUIRED','Choose a project status.');targetProjectState(project.status,target);if(target==='ACTIVE'&&!await MembershipModel.exists({projectId,status:'ACTIVE'}))throw new ConflictError('MEMBER_REQUIRED','Accept at least one member before starting the project.');project.status=target;project.statusReasonCode=input.reason;const now=new Date();if(target==='ACTIVE')project.startedAt=now;if(target==='CANCELLED'){project.cancelledAt=now;project.acceptingMembers=false}if(target==='ARCHIVED'){project.archivedAt=now;project.acceptingMembers=false}await project.save();if(['CANCELLED','ARCHIVED'].includes(target)){await JoinModel.updateMany({projectId,status:'PENDING'},{$set:{status:'EXPIRED',expiredAt:now},$inc:{version:1}});await InvitationModel.updateMany({projectId,status:'PENDING'},{$set:{status:'EXPIRED',expiredAt:now},$inc:{version:1}})}await record(project,userId,`PROJECT_${target}`,target,context.requestId);return get(projectId,userId)}
-  async function recruitment(userId,projectId,input,context){const project=await owned(userId,projectId);if(!recruitmentStates.includes(project.status))throw new ConflictError('INVALID_STATE','Recruitment can change only for recruiting or active projects.');if(input.acceptingMembers&&!project.openings.some((o)=>o.status==='OPEN'&&o.filledCount<o.capacity))throw new ConflictError('NO_OPEN_CAPACITY','Open an available role before enabling recruitment.');project.acceptingMembers=input.acceptingMembers;await project.save();await record(project,userId,input.acceptingMembers?'PROJECT_RECRUITMENT_OPENED':'PROJECT_RECRUITMENT_PAUSED','RECRUITMENT',context.requestId);return get(projectId,userId)}
-  async function addOpening(userId,projectId,input,context){const project=await owned(userId,projectId);if(!['DRAFT','RECRUITING','ACTIVE'].includes(project.status))throw new ConflictError('INVALID_STATE');if(project.openings.length>=20)throw new ConflictError('OPENING_LIMIT','A project can have at most 20 openings.');await validateSkills(input.requiredSkillIds);project.openings.push(input);project.materialRevision+=1;await project.save();await record(project,userId,'PROJECT_OPENING_CREATED','CREATE_OPENING',context.requestId,{openingId:String(project.openings.at(-1)._id)});return (await get(projectId,userId)).openings.at(-1)}
-  async function updateOpening(userId,projectId,openingId,input,context){const project=await owned(userId,projectId);if(!['DRAFT','RECRUITING','ACTIVE'].includes(project.status))throw new ConflictError('INVALID_STATE');const opening=project.openings.id(openingId);if(!opening)throw new NotFoundError();if(input.capacity!==undefined&&input.capacity<opening.filledCount)throw new ConflictError('CAPACITY_BELOW_FILLED','Capacity cannot be below active membership.');const pending=await JoinModel.exists({projectId,openingId,status:'PENDING'})||await InvitationModel.exists({projectId,openingId,status:'PENDING'});if(pending&&(input.roleName||input.description||input.requiredSkillIds))throw new ConflictError('TERMS_LOCKED','Material opening terms cannot change while responses are pending.');await validateSkills(input.requiredSkillIds);Object.assign(opening,input);opening.status=opening.filledCount>=opening.capacity?'FILLED':opening.status==='FILLED'?'OPEN':opening.status;project.materialRevision+=1;await project.save();await record(project,userId,'PROJECT_OPENING_UPDATED','UPDATE_OPENING',context.requestId,{openingId});return (await get(projectId,userId)).openings.find((o)=>o.id===openingId)}
-  async function openingState(userId,projectId,openingId,state,context){const project=await owned(userId,projectId);const opening=project.openings.id(openingId);if(!opening)throw new NotFoundError();if(!['DRAFT','RECRUITING','ACTIVE'].includes(project.status))throw new ConflictError('INVALID_STATE');if(state==='OPEN'&&opening.filledCount>=opening.capacity)throw new ConflictError('CAPACITY_UNAVAILABLE');opening.status=state;await project.save();if(state==='CLOSED'){const now=new Date();await JoinModel.updateMany({projectId,openingId,status:'PENDING'},{$set:{status:'EXPIRED',expiredAt:now},$inc:{version:1}});await InvitationModel.updateMany({projectId,openingId,status:'PENDING'},{$set:{status:'EXPIRED',expiredAt:now},$inc:{version:1}})}await record(project,userId,`PROJECT_OPENING_${state}`,'OPENING_STATE',context.requestId,{openingId});return (await get(projectId,userId)).openings.find((o)=>o.id===openingId)}
-  return{create,list,mine,get,update,publish,transition,recruitment,addOpening,updateOpening,closeOpening:(u,p,o,c)=>openingState(u,p,o,'CLOSED',c),reopenOpening:(u,p,o,c)=>openingState(u,p,o,'OPEN',c)};
+export function createProjectService({
+  config,
+  ProjectModel = Project,
+  MembershipModel = ProjectMembership,
+  JoinModel = JoinRequest,
+  InvitationModel = Invitation,
+  UserModel = User,
+  ProfileModel = Profile,
+  SkillModel = Skill,
+  AffiliationModel = UniversityAffiliation,
+  AuditModel = AuditEvent,
+  OutboxModel = OutboxEvent,
+  transaction = withTransaction,
+} = {}) {
+  const codec = createCursorCodec(config.csrfSecret);
+  async function eligible(userId) {
+    const user = await q(UserModel.findById(userId));
+    const profile = await q(
+      ProfileModel.findOne({ userId, moderationStatus: "VISIBLE" }),
+    );
+    const affiliation = await q(
+      AffiliationModel.findOne({ userId, isActive: true }),
+    );
+    if (
+      !user ||
+      user.status !== "ACTIVE" ||
+      !user.capabilities?.includes("STUDENT")
+    )
+      throw new AuthorizationError(
+        "PROJECT_OWNER_NOT_ELIGIBLE",
+        "This account cannot manage projects.",
+      );
+    if (!profile)
+      throw new ConflictError(
+        "PROFILE_REQUIRED",
+        "Create your profile before creating a project.",
+      );
+    if (
+      !affiliation ||
+      (config.requireEmailVerification && affiliation.status !== "VERIFIED")
+    )
+      throw new AuthorizationError(
+        "UNIVERSITY_ACCESS_REQUIRED",
+        "A current university affiliation is required.",
+      );
+    return { profile, affiliation };
+  }
+  async function validateSkills(ids) {
+    if (!ids?.length) return;
+    const count = await SkillModel.countDocuments({
+      _id: { $in: ids },
+      status: "ACTIVE",
+    });
+    if (count !== new Set(ids).size)
+      throw new ConflictError(
+        "INVALID_SKILL",
+        "One or more selected skills are unavailable.",
+      );
+  }
+  async function record(
+    project,
+    actorId,
+    eventName,
+    action,
+    requestId,
+    payload = {},
+    session,
+  ) {
+    const now = new Date();
+    if (AuditModel)
+      await AuditModel.create(
+        [
+          {
+            eventName,
+            category: "LIFECYCLE",
+            actorType: "USER",
+            actorId,
+            targetType: "PROJECT",
+            targetId: project._id,
+            action,
+            result: "SUCCESS",
+            correlationId: requestId,
+            metadata: payload,
+            occurredAt: now,
+          },
+        ],
+        session ? { session } : {},
+      );
+    if (OutboxModel)
+      await OutboxModel.create(
+        [
+          {
+            eventName,
+            aggregateType: "PROJECT",
+            aggregateId: project._id,
+            aggregateVersion: project.version,
+            payload: {
+              projectId: String(project._id),
+              actorId: String(actorId),
+              ...payload,
+            },
+            availableAt: now,
+          },
+        ],
+        session ? { session } : {},
+      );
+  }
+  async function skillsFor(projects) {
+    const ids = [
+      ...new Set(
+        projects
+          .flatMap((p) => [
+            ...(p.requiredSkillIds ?? []),
+            ...(p.openings ?? []).flatMap((o) => o.requiredSkillIds ?? []),
+          ])
+          .map(String),
+      ),
+    ];
+    const rows = ids.length
+      ? await q(SkillModel.find({ _id: { $in: ids } }), { lean: true })
+      : [];
+    return new Map(
+      rows.map((s) => [
+        String(s._id),
+        { id: String(s._id), name: s.name, category: s.category },
+      ]),
+    );
+  }
+  async function view(projects, viewerId) {
+    const skillMap = await skillsFor(projects);
+    const memberProjects = new Set();
+    if (viewerId) {
+      const rows = await q(
+        MembershipModel.find({ userId: viewerId, status: "ACTIVE" }).select(
+          "projectId",
+        ),
+        { lean: true },
+      );
+      rows.forEach((m) => memberProjects.add(String(m.projectId)));
+    }
+    return projects.map((p) => ({
+      id: String(p._id),
+      title: p.title,
+      description: p.description,
+      projectType: p.projectType,
+      skills: (p.requiredSkillIds ?? [])
+        .map((id) => skillMap.get(String(id)))
+        .filter(Boolean),
+      visibility: p.visibility,
+      expectedStartAt: p.expectedStartAt ?? null,
+      expectedEndAt: p.expectedEndAt ?? null,
+      openings: (p.openings ?? []).map((o) => ({
+        id: String(o._id),
+        roleName: o.roleName,
+        description: o.description,
+        skills: (o.requiredSkillIds ?? [])
+          .map((id) => skillMap.get(String(id)))
+          .filter(Boolean),
+        capacity: o.capacity,
+        filledCount: o.filledCount,
+        status: o.status,
+        remainingCapacity: Math.max(0, o.capacity - o.filledCount),
+      })),
+      acceptingMembers: p.acceptingMembers,
+      status: p.status,
+      owner: {
+        id: String(p.ownerId),
+        displayName: p.ownerSnapshot?.displayName ?? "CampusCollab member",
+      },
+      isOwner: String(p.ownerId) === String(viewerId),
+      isMember: memberProjects.has(String(p._id)),
+      createdAt: p.createdAt,
+      updatedAt: p.updatedAt,
+      version: p.version,
+    }));
+  }
+  async function create(userId, input, context) {
+    const { profile, affiliation } = await eligible(userId);
+    await validateSkills([
+      ...input.requiredSkillIds,
+      ...input.openings.flatMap((o) => o.requiredSkillIds),
+    ]);
+    const project = await ProjectModel.create({
+      ...input,
+      ownerId: userId,
+      ownerSnapshot: {
+        displayName: profile.displayName,
+        universityId: affiliation.universityId,
+      },
+      universityId:
+        input.visibility === "UNIVERSITY"
+          ? affiliation.universityId
+          : undefined,
+      status: "DRAFT",
+      acceptingMembers: false,
+    });
+    await record(
+      project,
+      userId,
+      "PROJECT_CREATED",
+      "CREATE",
+      context.requestId,
+    );
+    return (await view([project.toObject()], userId))[0];
+  }
+  function cursorFilter(cursor, scope, direction) {
+    const decoded = codec.decode(cursor, scope);
+    if (!decoded) return {};
+    const op = direction === 1 ? "$gt" : "$lt";
+    return {
+      $or: [
+        { createdAt: { [op]: new Date(decoded.at) } },
+        { createdAt: new Date(decoded.at), _id: { [op]: decoded.id } },
+      ],
+    };
+  }
+  async function paged(filter, input, scope, viewerId) {
+    const direction = input.sort === "OLDEST" ? 1 : -1;
+    const rows = await q(
+      ProjectModel.find({
+        ...filter,
+        ...cursorFilter(input.cursor, scope, direction),
+      })
+        .sort({ createdAt: direction, _id: direction })
+        .limit(input.limit + 1),
+      { lean: true },
+    );
+    const hasMore = rows.length > input.limit;
+    const values = hasMore ? rows.slice(0, input.limit) : rows;
+    const last = values.at(-1);
+    return {
+      projects: await view(values, viewerId),
+      hasMore,
+      nextCursor: hasMore
+        ? codec.encode({
+            scope,
+            at: new Date(last.createdAt).toISOString(),
+            id: String(last._id),
+          })
+        : null,
+    };
+  }
+  async function list(input, viewerId) {
+    const filter = {
+      status: { $in: ["RECRUITING", "ACTIVE"] },
+      moderationStatus: "VISIBLE",
+    };
+    const scopes = [{ visibility: "PLATFORM" }];
+    if (viewerId) {
+      const affiliation = await q(
+        AffiliationModel.findOne({ userId: viewerId, isActive: true }),
+        { lean: true },
+      );
+      if (affiliation)
+        scopes.push({
+          visibility: "UNIVERSITY",
+          universityId: affiliation.universityId,
+        });
+    }
+    filter.$or = scopes;
+    if (input.q)
+      filter.$or = [
+        ...scopes.map((scope) => ({
+          ...scope,
+          $or: [
+            { title: { $regex: escape(input.q), $options: "i" } },
+            { description: { $regex: escape(input.q), $options: "i" } },
+          ],
+        })),
+      ];
+    if (input.projectType) filter.projectType = input.projectType;
+    if (input.skillId)
+      filter.$and = [
+        {
+          $or: [
+            { requiredSkillIds: input.skillId },
+            { "openings.requiredSkillIds": input.skillId },
+          ],
+        },
+      ];
+    return paged(
+      filter,
+      input,
+      `project-list:${viewerId ?? "public"}:${input.q ?? ""}:${input.projectType ?? ""}:${input.skillId ?? ""}:${input.sort}`,
+      viewerId,
+    );
+  }
+  async function mine(userId, input) {
+    const membershipRows = await q(
+      MembershipModel.find({ userId, status: "ACTIVE" }).select("projectId"),
+      { lean: true },
+    );
+    const ids = membershipRows.map((m) => m.projectId);
+    const filter = { $or: [{ ownerId: userId }, { _id: { $in: ids } }] };
+    if (input.status) filter.status = input.status;
+    return paged(
+      filter,
+      input,
+      `project-mine:${userId}:${input.status ?? ""}:${input.sort}`,
+      userId,
+    );
+  }
+  async function get(projectId, viewerId) {
+    const project = await q(ProjectModel.findById(projectId), { lean: true });
+    if (!project || project.moderationStatus !== "VISIBLE")
+      throw new NotFoundError();
+    const owner = String(project.ownerId) === String(viewerId);
+    const membership = viewerId
+      ? await q(
+          MembershipModel.findOne({
+            projectId,
+            userId: viewerId,
+            status: "ACTIVE",
+          }),
+          { lean: true },
+        )
+      : null;
+    if (project.visibility === "PRIVATE" && !owner && !membership)
+      throw new NotFoundError();
+    if (project.visibility === "UNIVERSITY" && !owner && !membership) {
+      if (!viewerId) throw new NotFoundError();
+      const affiliation = await q(
+        AffiliationModel.findOne({ userId: viewerId, isActive: true }),
+        { lean: true },
+      );
+      if (
+        !affiliation ||
+        String(affiliation.universityId) !== String(project.universityId)
+      )
+        throw new NotFoundError();
+    }
+    if (["DRAFT", "ARCHIVED"].includes(project.status) && !owner && !membership)
+      throw new NotFoundError();
+    const base = (await view([project], viewerId))[0];
+    const memberships = await q(
+      MembershipModel.find({ projectId, status: "ACTIVE" }),
+      { lean: true },
+    );
+    const memberProfiles = memberships.length
+      ? await q(
+          ProfileModel.find({
+            userId: { $in: memberships.map((m) => m.userId) },
+            moderationStatus: "VISIBLE",
+            visibility: { $ne: "PRIVATE" },
+          }),
+          { lean: true },
+        )
+      : [];
+    const profileMap = new Map(
+      memberProfiles.map((p) => [String(p.userId), p]),
+    );
+    return {
+      ...base,
+      membershipId: membership ? String(membership._id) : null,
+      members: [
+        {
+          id: String(project.ownerId),
+          displayName: project.ownerSnapshot?.displayName ?? "Project owner",
+          role: "Project owner",
+          isOwner: true,
+        },
+        ...memberships.map((m) => ({
+          id: String(m.userId),
+          displayName:
+            profileMap.get(String(m.userId))?.displayName ??
+            "CampusCollab member",
+          headline: profileMap.get(String(m.userId))?.headline ?? "",
+          role: m.roleSnapshot.roleName,
+          isOwner: false,
+        })),
+      ],
+    };
+  }
+  async function owned(userId, projectId, session) {
+    const project = await q(
+      ProjectModel.findOne({ _id: projectId, ownerId: userId }),
+      { session },
+    );
+    if (!project) throw new NotFoundError();
+    return project;
+  }
+  async function update(userId, projectId, input, context) {
+    const project = await owned(userId, projectId);
+    if (!editableProjectStates.includes(project.status))
+      throw new ConflictError(
+        "INVALID_STATE",
+        "Only draft or recruiting projects can be edited.",
+      );
+    await validateSkills(input.requiredSkillIds);
+    if (
+      input.expectedStartAt &&
+      input.expectedEndAt &&
+      input.expectedEndAt <= input.expectedStartAt
+    )
+      throw new ConflictError(
+        "INVALID_DATES",
+        "End date must be after start date.",
+      );
+    Object.assign(project, input);
+    if (input.visibility)
+      project.universityId =
+        input.visibility === "UNIVERSITY"
+          ? project.ownerSnapshot.universityId
+          : undefined;
+    project.materialRevision += 1;
+    await project.save();
+    await record(
+      project,
+      userId,
+      "PROJECT_UPDATED",
+      "UPDATE",
+      context.requestId,
+    );
+    return get(projectId, userId);
+  }
+  async function publish(userId, projectId, context) {
+    const project = await owned(userId, projectId);
+    targetProjectState(project.status, "RECRUITING");
+    if (!project.openings.length)
+      throw new ConflictError(
+        "PROJECT_INCOMPLETE",
+        "Add at least one opening before publishing.",
+      );
+    if (
+      !project.openings.some(
+        (o) => o.status === "OPEN" && o.capacity > o.filledCount,
+      )
+    )
+      throw new ConflictError(
+        "PROJECT_INCOMPLETE",
+        "At least one opening must have available capacity.",
+      );
+    project.status = "RECRUITING";
+    project.acceptingMembers = true;
+    project.publishedAt = new Date();
+    project.materialRevision += 1;
+    await project.save();
+    await record(
+      project,
+      userId,
+      "PROJECT_PUBLISHED",
+      "PUBLISH",
+      context.requestId,
+    );
+    return get(projectId, userId);
+  }
+  async function transition(userId, projectId, input, context) {
+    await transaction(async (session) => {
+      const project = await owned(userId, projectId, session);
+      const target = input.toStatus;
+      if (!target)
+        throw new ConflictError(
+          "TARGET_STATUS_REQUIRED",
+          "Choose a project status.",
+        );
+      targetProjectState(project.status, target);
+      if (
+        target === "ACTIVE" &&
+        !(await q(MembershipModel.exists({ projectId, status: "ACTIVE" }), {
+          session,
+        }))
+      )
+        throw new ConflictError(
+          "MEMBER_REQUIRED",
+          "Accept at least one member before starting the project.",
+        );
+      project.status = target;
+      project.statusReasonCode = input.reason;
+      const now = new Date();
+      if (target === "ACTIVE") project.startedAt = now;
+      if (target === "CANCELLED") {
+        project.cancelledAt = now;
+        project.acceptingMembers = false;
+      }
+      if (target === "ARCHIVED") {
+        project.archivedAt = now;
+        project.acceptingMembers = false;
+      }
+      await project.save({ session });
+      if (["CANCELLED", "ARCHIVED"].includes(target)) {
+        await JoinModel.updateMany(
+          { projectId, status: "PENDING" },
+          { $set: { status: "EXPIRED", expiredAt: now }, $inc: { version: 1 } },
+          { session },
+        );
+        await InvitationModel.updateMany(
+          { projectId, status: "PENDING" },
+          { $set: { status: "EXPIRED", expiredAt: now }, $inc: { version: 1 } },
+          { session },
+        );
+      }
+      await record(
+        project,
+        userId,
+        `PROJECT_${target}`,
+        target,
+        context.requestId,
+        {},
+        session,
+      );
+    });
+    return get(projectId, userId);
+  }
+  async function recruitment(userId, projectId, input, context) {
+    const project = await owned(userId, projectId);
+    if (!recruitmentStates.includes(project.status))
+      throw new ConflictError(
+        "INVALID_STATE",
+        "Recruitment can change only for recruiting or active projects.",
+      );
+    if (
+      input.acceptingMembers &&
+      !project.openings.some(
+        (o) => o.status === "OPEN" && o.filledCount < o.capacity,
+      )
+    )
+      throw new ConflictError(
+        "NO_OPEN_CAPACITY",
+        "Open an available role before enabling recruitment.",
+      );
+    project.acceptingMembers = input.acceptingMembers;
+    await project.save();
+    await record(
+      project,
+      userId,
+      input.acceptingMembers
+        ? "PROJECT_RECRUITMENT_OPENED"
+        : "PROJECT_RECRUITMENT_PAUSED",
+      "RECRUITMENT",
+      context.requestId,
+    );
+    return get(projectId, userId);
+  }
+  async function addOpening(userId, projectId, input, context) {
+    const project = await owned(userId, projectId);
+    if (!["DRAFT", "RECRUITING", "ACTIVE"].includes(project.status))
+      throw new ConflictError("INVALID_STATE");
+    if (project.openings.length >= 20)
+      throw new ConflictError(
+        "OPENING_LIMIT",
+        "A project can have at most 20 openings.",
+      );
+    await validateSkills(input.requiredSkillIds);
+    project.openings.push(input);
+    project.materialRevision += 1;
+    await project.save();
+    await record(
+      project,
+      userId,
+      "PROJECT_OPENING_CREATED",
+      "CREATE_OPENING",
+      context.requestId,
+      { openingId: String(project.openings.at(-1)._id) },
+    );
+    return (await get(projectId, userId)).openings.at(-1);
+  }
+  async function updateOpening(userId, projectId, openingId, input, context) {
+    const project = await owned(userId, projectId);
+    if (!["DRAFT", "RECRUITING", "ACTIVE"].includes(project.status))
+      throw new ConflictError("INVALID_STATE");
+    const opening = project.openings.id(openingId);
+    if (!opening) throw new NotFoundError();
+    if (input.capacity !== undefined && input.capacity < opening.filledCount)
+      throw new ConflictError(
+        "CAPACITY_BELOW_FILLED",
+        "Capacity cannot be below active membership.",
+      );
+    const pending =
+      (await JoinModel.exists({ projectId, openingId, status: "PENDING" })) ||
+      (await InvitationModel.exists({
+        projectId,
+        openingId,
+        status: "PENDING",
+      }));
+    if (
+      pending &&
+      (input.roleName || input.description || input.requiredSkillIds)
+    )
+      throw new ConflictError(
+        "TERMS_LOCKED",
+        "Material opening terms cannot change while responses are pending.",
+      );
+    await validateSkills(input.requiredSkillIds);
+    Object.assign(opening, input);
+    opening.status =
+      opening.filledCount >= opening.capacity
+        ? "FILLED"
+        : opening.status === "FILLED"
+          ? "OPEN"
+          : opening.status;
+    project.materialRevision += 1;
+    await project.save();
+    await record(
+      project,
+      userId,
+      "PROJECT_OPENING_UPDATED",
+      "UPDATE_OPENING",
+      context.requestId,
+      { openingId },
+    );
+    return (await get(projectId, userId)).openings.find(
+      (o) => o.id === openingId,
+    );
+  }
+  async function openingState(userId, projectId, openingId, state, context) {
+    await transaction(async (session) => {
+      const project = await owned(userId, projectId, session);
+      const opening = project.openings.id(openingId);
+      if (!opening) throw new NotFoundError();
+      if (!["DRAFT", "RECRUITING", "ACTIVE"].includes(project.status))
+        throw new ConflictError("INVALID_STATE");
+      if (state === "OPEN" && opening.filledCount >= opening.capacity)
+        throw new ConflictError("CAPACITY_UNAVAILABLE");
+      opening.status = state;
+      await project.save({ session });
+      if (state === "CLOSED") {
+        const now = new Date();
+        await JoinModel.updateMany(
+          { projectId, openingId, status: "PENDING" },
+          { $set: { status: "EXPIRED", expiredAt: now }, $inc: { version: 1 } },
+          { session },
+        );
+        await InvitationModel.updateMany(
+          { projectId, openingId, status: "PENDING" },
+          { $set: { status: "EXPIRED", expiredAt: now }, $inc: { version: 1 } },
+          { session },
+        );
+      }
+      await record(
+        project,
+        userId,
+        `PROJECT_OPENING_${state}`,
+        "OPENING_STATE",
+        context.requestId,
+        { openingId },
+        session,
+      );
+    });
+    return (await get(projectId, userId)).openings.find(
+      (o) => o.id === openingId,
+    );
+  }
+  return {
+    create,
+    list,
+    mine,
+    get,
+    update,
+    publish,
+    transition,
+    recruitment,
+    addOpening,
+    updateOpening,
+    closeOpening: (u, p, o, c) => openingState(u, p, o, "CLOSED", c),
+    reopenOpening: (u, p, o, c) => openingState(u, p, o, "OPEN", c),
+  };
 }

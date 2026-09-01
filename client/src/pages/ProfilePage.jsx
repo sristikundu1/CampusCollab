@@ -1,42 +1,347 @@
-import { AlertCircle, CheckCircle2, ExternalLink, Eye, GraduationCap, LoaderCircle, LockKeyhole, Pencil, ShieldCheck, Sparkles } from 'lucide-react';
-import { useCallback, useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
-import { AvailabilityEditor } from '../components/profile/AvailabilityEditor.jsx';
-import { PortfolioSection } from '../components/profile/PortfolioSection.jsx';
-import { ProfileEditor } from '../components/profile/ProfileEditor.jsx';
-import { SkillsEditor } from '../components/profile/SkillsEditor.jsx';
-import { useAuth } from '../context/auth-context.js';
-import { useToast } from '../context/toast-context.js';
-import { AppShell } from '../layouts/AppShell.jsx';
-import { confirmAction } from '../lib/confirm-action.js';
-import { apiError, profileApi, skillApi } from '../services/api.js';
+import {
+  AlertCircle,
+  CheckCircle2,
+  ExternalLink,
+  Eye,
+  GraduationCap,
+  LoaderCircle,
+  LockKeyhole,
+  Pencil,
+  ShieldCheck,
+  Sparkles,
+} from "lucide-react";
+import { useCallback, useEffect, useState } from "react";
+import { Link } from "react-router-dom";
+import { AvailabilityEditor } from "../components/profile/AvailabilityEditor.jsx";
+import { PortfolioSection } from "../components/profile/PortfolioSection.jsx";
+import { ProfileEditor } from "../components/profile/ProfileEditor.jsx";
+import { SkillsEditor } from "../components/profile/SkillsEditor.jsx";
+import { useAuth } from "../context/auth-context.js";
+import { useToast } from "../context/toast-context.js";
+import { AppShell } from "../layouts/AppShell.jsx";
+import { confirmAction } from "../lib/confirm-action.js";
+import { apiError, profileApi, skillApi } from "../services/api.js";
 
-function ProfileSkeleton(){return <AppShell><div className="mx-auto max-w-5xl animate-pulse space-y-5"><div className="h-52 rounded-3xl bg-slate-200"/><div className="grid gap-5 md:grid-cols-2"><div className="h-64 rounded-3xl bg-slate-200"/><div className="h-64 rounded-3xl bg-slate-200"/></div></div></AppShell>}
+function ProfileSkeleton() {
+  return (
+    <AppShell>
+      <div className="mx-auto max-w-5xl animate-pulse space-y-5">
+        <div className="h-52 rounded-3xl bg-slate-200" />
+        <div className="grid gap-5 md:grid-cols-2">
+          <div className="h-64 rounded-3xl bg-slate-200" />
+          <div className="h-64 rounded-3xl bg-slate-200" />
+        </div>
+      </div>
+    </AppShell>
+  );
+}
 
-export function ProfilePage(){
-  const {refreshUser}=useAuth(); const {notify}=useToast();
-  const [profile,setProfile]=useState(null); const [items,setItems]=useState([]); const [catalogue,setCatalogue]=useState([]);
-  const [loading,setLoading]=useState(true); const [error,setError]=useState(''); const [editing,setEditing]=useState(false); const [busy,setBusy]=useState('');
-  const load=useCallback(async()=>{setLoading(true);setError('');try{const [profileResponse,portfolioResponse,skillsResponse]=await Promise.all([profileApi.own(),profileApi.ownPortfolio(),skillApi.list()]);setProfile(profileResponse.data.data.profile);setItems(portfolioResponse.data.data.items);setCatalogue(skillsResponse.data.data.skills)}catch(reason){setError(apiError(reason).message)}finally{setLoading(false)}},[]);
-  useEffect(()=>{void load()},[load]);
-  const perform=async(key,work,message)=>{setBusy(key);try{const result=await work();if(result?.profile)setProfile(result.profile);if(result?.items)setItems(result.items);notify(message);await refreshUser();return true}catch(reason){notify(apiError(reason).message,'error');return false}finally{setBusy('')}};
-  if(loading)return <ProfileSkeleton/>;
-  if(error)return <AppShell><div className="mx-auto max-w-xl rounded-3xl border border-rose-200 bg-white p-8 text-center"><AlertCircle className="mx-auto text-rose-600"/><h1 className="mt-4 text-xl font-bold">Could not load your profile</h1><p className="mt-2 text-slate-600">{error}</p><button className="btn-primary mt-6" onClick={load}>Try again</button></div></AppShell>;
-  const saveProfile=async(body)=>{const ok=await perform('profile',async()=>({profile:(await profileApi.update(body)).data.data.profile}),'Profile updated.');if(ok)setEditing(false)};
-  const saveSkills=(skills)=>perform('skills',async()=>({profile:(await profileApi.replaceSkills(skills)).data.data.profile}),'Skills updated.');
-  const createSkill=async(body)=>{try{const skill=(await skillApi.create(body)).data.data.skill;setCatalogue((current)=>current.some((item)=>item.id===skill.id)?current:[...current,skill].sort((a,b)=>a.name.localeCompare(b.name)));notify('Skill added and selected.');return skill}catch(reason){notify(apiError(reason).message,'error');return null}};
-  const saveAvailability=(body)=>perform('availability',async()=>({profile:(await profileApi.updateAvailability(body)).data.data.profile}),'Availability updated.');
-  const createPortfolio=(body)=>perform('portfolio',async()=>{const item=(await profileApi.createPortfolio(body)).data.data.item;return{items:[item,...items]};},'Portfolio project added.');
-  const updatePortfolio=(id,body)=>perform('portfolio',async()=>{const item=(await profileApi.updatePortfolio(id,body)).data.data.item;return{items:items.map((entry)=>entry.id===id?item:entry)}},'Portfolio project updated.');
-  const deletePortfolio=async(id)=>{const confirmed=await confirmAction({title:'Remove portfolio project?',text:'This project will be removed from your CampusCollab profile.',confirmText:'Remove project',icon:'warning',danger:true});if(!confirmed)return;await perform('portfolio',async()=>{await profileApi.deletePortfolio(id);return{items:items.filter((entry)=>entry.id!==id)}},'Portfolio project removed.')};
-  const initials=profile.displayName.split(/\s+/).map((part)=>part[0]).slice(0,2).join('').toUpperCase();
-  const VisibilityIcon=profile.visibility==='PRIVATE'?LockKeyhole:Eye;
-  return <AppShell><div className="mx-auto max-w-5xl">
-    <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-end"><div><p className="eyebrow">Professional identity</p><h1 className="mt-2 text-3xl font-bold text-slate-950">Your profile</h1><p className="mt-2 text-slate-600">Build a credible profile for opportunities and collaboration.</p></div><div className="flex gap-3"><Link className="btn-secondary" to={`/students/${profile.userId}`}><ExternalLink size={16}/> Public view</Link><button className="btn-primary" onClick={()=>setEditing(!editing)}><Pencil size={16}/> {editing?'Close editor':'Edit profile'}</button></div></div>
-    {editing&&<ProfileEditor profile={profile} saving={busy==='profile'} onCancel={()=>setEditing(false)} onSave={saveProfile}/>}
-    <section className="surface mt-6 overflow-hidden"><div className="h-32 bg-[radial-gradient(circle_at_80%_20%,#60a5fa_0,transparent_30%),linear-gradient(120deg,#172554,#2856cc)]"/><div className="px-6 pb-7 sm:px-8"><div className="-mt-14 flex flex-col gap-4 sm:flex-row sm:items-end"><div className="grid size-28 place-items-center rounded-3xl border-4 border-white bg-brand-100 text-3xl font-black text-brand-700 shadow-sm" aria-label="Profile avatar">{initials}</div><div className="flex-1 pb-1"><h2 className="text-2xl font-bold">{profile.displayName}</h2><p className="mt-1 font-medium text-slate-600">{profile.headline||'Add a professional headline'}</p><div className="mt-2 flex flex-wrap gap-2 text-xs font-semibold text-slate-500"><span className="inline-flex items-center gap-1"><GraduationCap size={14}/>{profile.university?.name||'University unavailable'}</span><span className="inline-flex items-center gap-1"><ShieldCheck size={14}/>{profile.universityVerification?.status==='VERIFIED'?'Verified university email':'UIU domain member'}</span><span className="inline-flex items-center gap-1"><VisibilityIcon size={14}/>{profile.visibility.toLowerCase()}</span></div></div><div className="min-w-44 rounded-2xl bg-slate-50 p-4"><div className="flex items-center justify-between text-sm"><span className="font-semibold">Profile completion</span><strong className="text-brand-700">{profile.completionScore}%</strong></div><div className="mt-2 h-2 overflow-hidden rounded-full bg-slate-200"><div className="h-full rounded-full bg-brand-600 transition-all" style={{width:`${profile.completionScore}%`}}/></div><p className="mt-2 flex items-center gap-1 text-xs text-slate-500">{profile.isCompleteForApplications?<><CheckCircle2 size={13} className="text-emerald-600"/>Ready for applications</>:<><LoaderCircle size={13}/>Keep building your profile</>}</p></div></div><p className="mt-6 max-w-3xl whitespace-pre-wrap text-sm leading-7 text-slate-600">{profile.bio||'Add a short bio about your interests, strengths, and what you want to build.'}</p>{profile.externalLinks?.length>0&&<div className="mt-4 flex flex-wrap gap-3">{profile.externalLinks.map((link)=><a key={`${link.type}-${link.url}`} href={link.url} target="_blank" rel="noreferrer" className="text-sm font-bold text-brand-600 hover:underline">{link.label||link.type}</a>)}</div>}</div></section>
-    <div className="mt-5 grid gap-5 lg:grid-cols-[1.35fr_.8fr]"><SkillsEditor key={`skills-${profile.version}`} profileSkills={profile.skills} catalogue={catalogue} saving={busy==='skills'} onSave={saveSkills} onCreateSkill={createSkill}/><AvailabilityEditor key={`availability-${profile.version}`} availability={profile.availability} saving={busy==='availability'} onSave={saveAvailability}/></div>
-    <div className="mt-5"><PortfolioSection items={items} catalogue={catalogue} saving={busy==='portfolio'} onCreate={createPortfolio} onUpdate={updatePortfolio} onDelete={deletePortfolio}/></div>
-    <section className="mt-5 rounded-3xl bg-brand-950 p-6 text-white"><div className="flex items-start gap-3"><Sparkles className="mt-1 text-brand-300"/><div><h2 className="font-bold">Completion is calculated from real profile data</h2><p className="mt-1 text-sm leading-6 text-brand-100">Add a headline, bio, academic details, availability, skills, links, and a published project to reach 100%.</p></div></div></section>
-  </div></AppShell>;
+export function ProfilePage() {
+  const { refreshUser } = useAuth();
+  const { notify } = useToast();
+  const [profile, setProfile] = useState(null);
+  const [items, setItems] = useState([]);
+  const [catalogue, setCatalogue] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [editing, setEditing] = useState(false);
+  const [busy, setBusy] = useState("");
+  const load = useCallback(async () => {
+    setLoading(true);
+    setError("");
+    try {
+      const [profileResponse, portfolioResponse, skillsResponse] =
+        await Promise.all([
+          profileApi.own(),
+          profileApi.ownPortfolio(),
+          skillApi.list(),
+        ]);
+      setProfile(profileResponse.data.data.profile);
+      setItems(portfolioResponse.data.data.items);
+      setCatalogue(skillsResponse.data.data.skills);
+    } catch (reason) {
+      setError(apiError(reason).message);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+  useEffect(() => {
+    void load();
+  }, [load]);
+  const perform = async (key, work, message) => {
+    setBusy(key);
+    try {
+      const result = await work();
+      if (result?.profile) setProfile(result.profile);
+      if (result?.items) setItems(result.items);
+      notify(message);
+      await refreshUser();
+      return true;
+    } catch (reason) {
+      notify(apiError(reason).message, "error");
+      return false;
+    } finally {
+      setBusy("");
+    }
+  };
+  if (loading) return <ProfileSkeleton />;
+  if (error)
+    return (
+      <AppShell>
+        <div className="mx-auto max-w-xl rounded-3xl border border-rose-200 bg-white p-8 text-center">
+          <AlertCircle className="mx-auto text-rose-600" />
+          <h1 className="mt-4 text-xl font-bold">
+            Could not load your profile
+          </h1>
+          <p className="mt-2 text-slate-600">{error}</p>
+          <button className="btn-primary mt-6" onClick={load}>
+            Try again
+          </button>
+        </div>
+      </AppShell>
+    );
+  const saveProfile = async (body) => {
+    const ok = await perform(
+      "profile",
+      async () => ({
+        profile: (await profileApi.update(body)).data.data.profile,
+      }),
+      "Profile updated.",
+    );
+    if (ok) setEditing(false);
+  };
+  const saveSkills = (skills) =>
+    perform(
+      "skills",
+      async () => ({
+        profile: (await profileApi.replaceSkills(skills)).data.data.profile,
+      }),
+      "Skills updated.",
+    );
+  const createSkill = async (body) => {
+    try {
+      const skill = (await skillApi.create(body)).data.data.skill;
+      setCatalogue((current) =>
+        current.some((item) => item.id === skill.id)
+          ? current
+          : [...current, skill].sort((a, b) => a.name.localeCompare(b.name)),
+      );
+      notify("Skill added and selected.");
+      return skill;
+    } catch (reason) {
+      notify(apiError(reason).message, "error");
+      return null;
+    }
+  };
+  const saveAvailability = (body) =>
+    perform(
+      "availability",
+      async () => ({
+        profile: (await profileApi.updateAvailability(body)).data.data.profile,
+      }),
+      "Availability updated.",
+    );
+  const createPortfolio = (body) =>
+    perform(
+      "portfolio",
+      async () => {
+        const item = (await profileApi.createPortfolio(body)).data.data.item;
+        return { items: [item, ...items] };
+      },
+      "Portfolio project added.",
+    );
+  const updatePortfolio = (id, body) =>
+    perform(
+      "portfolio",
+      async () => {
+        const item = (await profileApi.updatePortfolio(id, body)).data.data
+          .item;
+        return {
+          items: items.map((entry) => (entry.id === id ? item : entry)),
+        };
+      },
+      "Portfolio project updated.",
+    );
+  const deletePortfolio = async (id) => {
+    const confirmed = await confirmAction({
+      title: "Remove portfolio project?",
+      text: "This project will be removed from your CampusCollab profile.",
+      confirmText: "Remove project",
+      icon: "warning",
+      danger: true,
+    });
+    if (!confirmed) return;
+    await perform(
+      "portfolio",
+      async () => {
+        await profileApi.deletePortfolio(id);
+        return { items: items.filter((entry) => entry.id !== id) };
+      },
+      "Portfolio project removed.",
+    );
+  };
+  const initials = profile.displayName
+    .split(/\s+/)
+    .map((part) => part[0])
+    .slice(0, 2)
+    .join("")
+    .toUpperCase();
+  const VisibilityIcon = profile.visibility === "PRIVATE" ? LockKeyhole : Eye;
+  return (
+    <AppShell>
+      <div className="mx-auto max-w-5xl">
+        <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
+          <div>
+            <p className="eyebrow">Professional identity</p>
+            <h1 className="mt-2 text-3xl font-bold text-slate-950">
+              Your profile
+            </h1>
+            <p className="mt-2 text-slate-600">
+              Build a credible profile for opportunities and collaboration.
+            </p>
+          </div>
+          <div className="flex gap-3">
+            <Link className="btn-secondary" to={`/students/${profile.userId}`}>
+              <ExternalLink size={16} /> Public view
+            </Link>
+            <button
+              className="btn-primary"
+              onClick={() => setEditing(!editing)}
+            >
+              <Pencil size={16} /> {editing ? "Close editor" : "Edit profile"}
+            </button>
+          </div>
+        </div>
+        {editing && (
+          <ProfileEditor
+            profile={profile}
+            saving={busy === "profile"}
+            onCancel={() => setEditing(false)}
+            onSave={saveProfile}
+          />
+        )}
+        <section className="surface mt-6 overflow-hidden">
+          <div className="h-32 bg-[radial-gradient(circle_at_80%_20%,#60a5fa_0,transparent_30%),linear-gradient(120deg,#172554,#2856cc)]" />
+          <div className="px-6 pb-7 sm:px-8">
+            <div className="-mt-14 flex flex-col gap-4 sm:flex-row sm:items-end">
+              <div
+                className="grid size-28 place-items-center rounded-3xl border-4 border-white bg-brand-100 text-3xl font-black text-brand-700 shadow-sm"
+                aria-label="Profile avatar"
+              >
+                {initials}
+              </div>
+              <div className="flex-1 pb-1">
+                <h2 className="text-2xl font-bold">{profile.displayName}</h2>
+                <p className="mt-1 font-medium text-slate-600">
+                  {profile.headline || "Add a professional headline"}
+                </p>
+                <div className="mt-2 flex flex-wrap gap-2 text-xs font-semibold text-slate-500">
+                  <span className="inline-flex items-center gap-1">
+                    <GraduationCap size={14} />
+                    {profile.university?.name || "University unavailable"}
+                  </span>
+                  <span className="inline-flex items-center gap-1">
+                    <ShieldCheck size={14} />
+                    {profile.universityVerification?.status === "VERIFIED"
+                      ? "Verified university email"
+                      : "UIU domain member"}
+                  </span>
+                  <span className="inline-flex items-center gap-1">
+                    <VisibilityIcon size={14} />
+                    {profile.visibility.toLowerCase()}
+                  </span>
+                </div>
+              </div>
+              <div className="min-w-44 rounded-2xl bg-slate-50 p-4">
+                <div className="flex items-center justify-between text-sm">
+                  <span className="font-semibold">Profile completion</span>
+                  <strong className="text-brand-700">
+                    {profile.completionScore}%
+                  </strong>
+                </div>
+                <div className="mt-2 h-2 overflow-hidden rounded-full bg-slate-200">
+                  <div
+                    className="h-full rounded-full bg-brand-600 transition-all"
+                    style={{ width: `${profile.completionScore}%` }}
+                  />
+                </div>
+                <p className="mt-2 flex items-center gap-1 text-xs text-slate-500">
+                  {profile.isCompleteForApplications ? (
+                    <>
+                      <CheckCircle2 size={13} className="text-emerald-600" />
+                      Ready for applications
+                    </>
+                  ) : (
+                    <>
+                      <LoaderCircle size={13} />
+                      Keep building your profile
+                    </>
+                  )}
+                </p>
+              </div>
+            </div>
+            <p className="mt-6 max-w-3xl whitespace-pre-wrap text-sm leading-7 text-slate-600">
+              {profile.bio ||
+                "Add a short bio about your interests, strengths, and what you want to build."}
+            </p>
+            {profile.externalLinks?.length > 0 && (
+              <div className="mt-4 flex flex-wrap gap-3">
+                {profile.externalLinks.map((link) => (
+                  <a
+                    key={`${link.type}-${link.url}`}
+                    href={link.url}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="text-sm font-bold text-brand-600 hover:underline"
+                  >
+                    {link.label || link.type}
+                  </a>
+                ))}
+              </div>
+            )}
+          </div>
+        </section>
+        <div className="mt-5 grid gap-5 lg:grid-cols-[1.35fr_.8fr]">
+          <SkillsEditor
+            key={`skills-${profile.version}`}
+            profileSkills={profile.skills}
+            catalogue={catalogue}
+            saving={busy === "skills"}
+            onSave={saveSkills}
+            onCreateSkill={createSkill}
+          />
+          <AvailabilityEditor
+            key={`availability-${profile.version}`}
+            availability={profile.availability}
+            saving={busy === "availability"}
+            onSave={saveAvailability}
+          />
+        </div>
+        <div className="mt-5">
+          <PortfolioSection
+            items={items}
+            catalogue={catalogue}
+            saving={busy === "portfolio"}
+            onCreate={createPortfolio}
+            onUpdate={updatePortfolio}
+            onDelete={deletePortfolio}
+          />
+        </div>
+        <section className="mt-5 rounded-3xl bg-brand-950 p-6 text-white">
+          <div className="flex items-start gap-3">
+            <Sparkles className="mt-1 text-brand-300" />
+            <div>
+              <h2 className="font-bold">
+                Completion is calculated from real profile data
+              </h2>
+              <p className="mt-1 text-sm leading-6 text-brand-100">
+                Add a headline, bio, academic details, availability, skills,
+                links, and a published project to reach 100%.
+              </p>
+            </div>
+          </div>
+        </section>
+      </div>
+    </AppShell>
+  );
 }

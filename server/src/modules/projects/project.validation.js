@@ -1,23 +1,148 @@
-import { z } from 'zod';
+import { z } from "zod";
 
-const empty=z.object({}).strict();const noBody=z.union([z.undefined(),empty]).optional();
-const id=z.string().regex(/^[a-f\d]{24}$/i,'Invalid identifier');
-const ids=z.array(id).max(30).refine((v)=>new Set(v).size===v.length,'Identifiers must be unique');
-const optionalText=(max)=>z.string().trim().max(max).transform((v)=>v||undefined).optional();
-const opening=z.object({roleName:z.string().trim().min(2).max(100),description:z.string().trim().min(1).max(2000),requiredSkillIds:ids.max(20).default([]),capacity:z.number().int().min(1).max(100)}).strict();
-const openingUpdate=opening.partial().refine((v)=>Object.keys(v).length>0,'At least one field is required');
-const projectFields={title:z.string().trim().min(5).max(180),description:z.string().trim().min(20).max(12000),projectType:z.enum(['RESEARCH','ACADEMIC','STARTUP','HACKATHON','PERSONAL','OTHER']),requiredSkillIds:ids.default([]),visibility:z.enum(['PLATFORM','UNIVERSITY','PRIVATE']).default('PLATFORM'),expectedStartAt:z.coerce.date().optional(),expectedEndAt:z.coerce.date().optional()};
-const project=z.object({...projectFields,openings:z.array(opening).max(20).default([])}).strict().superRefine((v,c)=>{if(v.expectedStartAt&&v.expectedEndAt&&v.expectedEndAt<=v.expectedStartAt)c.addIssue({code:'custom',path:['expectedEndAt'],message:'End date must be after start date'})});
-const projectUpdate=z.object(projectFields).partial().strict().refine((v)=>Object.keys(v).length>0,'At least one field is required');
-const projectParams=z.object({projectId:id}).strict();const openingParams=z.object({projectId:id,openingId:id}).strict();
-const list=z.object({q:z.string().trim().max(100).optional(),projectType:z.enum(['RESEARCH','ACADEMIC','STARTUP','HACKATHON','PERSONAL','OTHER']).optional(),skillId:id.optional(),status:z.enum(['DRAFT','RECRUITING','ACTIVE','CANCELLED','ARCHIVED']).optional(),sort:z.enum(['NEWEST','OLDEST']).default('NEWEST'),cursor:z.string().max(1024).optional(),limit:z.coerce.number().int().min(1).max(50).default(12)}).strict();
-export const createProjectRequest=z.object({params:empty,query:empty,body:project});
-export const listProjectsRequest=z.object({params:empty,query:list.omit({status:true}),body:noBody});
-export const mineProjectsRequest=z.object({params:empty,query:list.omit({q:true,projectType:true,skillId:true}),body:noBody});
-export const projectRequest=z.object({params:projectParams,query:empty,body:noBody});
-export const updateProjectRequest=z.object({params:projectParams,query:empty,body:projectUpdate});
-export const projectCommandRequest=z.object({params:projectParams,query:empty,body:z.object({toStatus:z.enum(['ACTIVE','CANCELLED','ARCHIVED']).optional(),reason:optionalText(500)}).strict().optional().default({})});
-export const recruitmentRequest=z.object({params:projectParams,query:empty,body:z.object({acceptingMembers:z.boolean()}).strict()});
-export const createOpeningRequest=z.object({params:projectParams,query:empty,body:opening});
-export const updateOpeningRequest=z.object({params:openingParams,query:empty,body:openingUpdate});
-export const openingCommandRequest=z.object({params:openingParams,query:empty,body:z.object({reason:optionalText(500)}).strict().optional().default({})});
+const empty = z.object({}).strict();
+const noBody = z.union([z.undefined(), empty]).optional();
+const id = z.string().regex(/^[a-f\d]{24}$/i, "Invalid identifier");
+const ids = z
+  .array(id)
+  .max(30)
+  .refine((v) => new Set(v).size === v.length, "Identifiers must be unique");
+const optionalText = (max) =>
+  z
+    .string()
+    .trim()
+    .max(max)
+    .transform((v) => v || undefined)
+    .optional();
+const opening = z
+  .object({
+    roleName: z.string().trim().min(2).max(100),
+    description: z.string().trim().min(1).max(2000),
+    requiredSkillIds: ids.max(20).default([]),
+    capacity: z.number().int().min(1).max(100),
+  })
+  .strict();
+const openingUpdate = opening
+  .partial()
+  .refine((v) => Object.keys(v).length > 0, "At least one field is required");
+const projectFields = {
+  title: z.string().trim().min(5).max(180),
+  description: z.string().trim().min(20).max(12000),
+  projectType: z.enum([
+    "RESEARCH",
+    "ACADEMIC",
+    "STARTUP",
+    "HACKATHON",
+    "PERSONAL",
+    "OTHER",
+  ]),
+  requiredSkillIds: ids.default([]),
+  visibility: z.enum(["PLATFORM", "UNIVERSITY", "PRIVATE"]).default("PLATFORM"),
+  expectedStartAt: z.coerce.date().optional(),
+  expectedEndAt: z.coerce.date().optional(),
+};
+const project = z
+  .object({ ...projectFields, openings: z.array(opening).max(20).default([]) })
+  .strict()
+  .superRefine((v, c) => {
+    if (
+      v.expectedStartAt &&
+      v.expectedEndAt &&
+      v.expectedEndAt <= v.expectedStartAt
+    )
+      c.addIssue({
+        code: "custom",
+        path: ["expectedEndAt"],
+        message: "End date must be after start date",
+      });
+  });
+const projectUpdate = z
+  .object(projectFields)
+  .partial()
+  .strict()
+  .refine((v) => Object.keys(v).length > 0, "At least one field is required");
+const projectParams = z.object({ projectId: id }).strict();
+const openingParams = z.object({ projectId: id, openingId: id }).strict();
+const list = z
+  .object({
+    q: z.string().trim().max(100).optional(),
+    projectType: z
+      .enum([
+        "RESEARCH",
+        "ACADEMIC",
+        "STARTUP",
+        "HACKATHON",
+        "PERSONAL",
+        "OTHER",
+      ])
+      .optional(),
+    skillId: id.optional(),
+    status: z
+      .enum(["DRAFT", "RECRUITING", "ACTIVE", "CANCELLED", "ARCHIVED"])
+      .optional(),
+    sort: z.enum(["NEWEST", "OLDEST"]).default("NEWEST"),
+    cursor: z.string().max(1024).optional(),
+    limit: z.coerce.number().int().min(1).max(50).default(12),
+  })
+  .strict();
+export const createProjectRequest = z.object({
+  params: empty,
+  query: empty,
+  body: project,
+});
+export const listProjectsRequest = z.object({
+  params: empty,
+  query: list.omit({ status: true }),
+  body: noBody,
+});
+export const mineProjectsRequest = z.object({
+  params: empty,
+  query: list.omit({ q: true, projectType: true, skillId: true }),
+  body: noBody,
+});
+export const projectRequest = z.object({
+  params: projectParams,
+  query: empty,
+  body: noBody,
+});
+export const updateProjectRequest = z.object({
+  params: projectParams,
+  query: empty,
+  body: projectUpdate,
+});
+export const projectCommandRequest = z.object({
+  params: projectParams,
+  query: empty,
+  body: z
+    .object({
+      toStatus: z.enum(["ACTIVE", "CANCELLED", "ARCHIVED"]).optional(),
+      reason: optionalText(500),
+    })
+    .strict()
+    .optional()
+    .default({}),
+});
+export const recruitmentRequest = z.object({
+  params: projectParams,
+  query: empty,
+  body: z.object({ acceptingMembers: z.boolean() }).strict(),
+});
+export const createOpeningRequest = z.object({
+  params: projectParams,
+  query: empty,
+  body: opening,
+});
+export const updateOpeningRequest = z.object({
+  params: openingParams,
+  query: empty,
+  body: openingUpdate,
+});
+export const openingCommandRequest = z.object({
+  params: openingParams,
+  query: empty,
+  body: z
+    .object({ reason: optionalText(500) })
+    .strict()
+    .optional()
+    .default({}),
+});

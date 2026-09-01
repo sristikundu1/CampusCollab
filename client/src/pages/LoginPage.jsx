@@ -1,8 +1,117 @@
-import { zodResolver } from '@hookform/resolvers/zod';
-import { useState } from 'react';
-import { useForm } from 'react-hook-form';
-import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { z } from 'zod';
-import { FormField } from '../components/FormField.jsx'; import { Spinner } from '../components/Spinner.jsx'; import { useAuth } from '../context/auth-context.js'; import { useToast } from '../context/toast-context.js'; import { AuthLayout } from '../layouts/AuthLayout.jsx'; import { apiError } from '../services/api.js';
-const schema=z.object({email:z.string().email('Enter a valid university email'),password:z.string().min(1,'Enter your password'),remember:z.boolean()});
-export function LoginPage(){const [submitting,setSubmitting]=useState(false);const {login}=useAuth();const {notify}=useToast();const navigate=useNavigate();const location=useLocation();const {register,handleSubmit,setError,formState:{errors}}=useForm({resolver:zodResolver(schema),defaultValues:{remember:false}});const submit=async(values)=>{setSubmitting(true);try{await login(values);notify('Welcome back to CampusCollab.');navigate(location.state?.from?.pathname||'/dashboard',{replace:true})}catch(error){const parsed=apiError(error);setError('root',{message:parsed.message})}finally{setSubmitting(false)}};return <AuthLayout eyebrow="Welcome back" title="Sign in to your account" subtitle="Continue building, collaborating, and creating opportunities on campus."><form onSubmit={handleSubmit(submit)} className="space-y-5" noValidate>{location.state?.registrationMessage&&<p className="rounded-xl bg-emerald-50 p-3 text-sm text-emerald-700" role="status">{location.state.registrationMessage}</p>}<FormField label="University email" type="email" autoComplete="email" placeholder="you@university.edu" error={errors.email?.message} {...register('email')}/><FormField label="Password" type="password" autoComplete="current-password" placeholder="Enter your password" error={errors.password?.message} {...register('password')}/><div className="flex items-center justify-between text-sm"><label className="flex items-center gap-2 text-slate-600"><input type="checkbox" className="size-4 accent-brand-600" {...register('remember')}/>Keep me signed in</label><Link className="font-semibold text-brand-600 hover:underline" to="/forgot-password">Forgot password?</Link></div>{errors.root&&<p className="rounded-xl bg-rose-50 p-3 text-sm text-rose-700" role="alert">{errors.root.message}</p>}<button className="btn-primary w-full" disabled={submitting}>{submitting?<Spinner label="Signing in"/>:'Sign in'}</button><p className="text-center text-sm text-slate-600">New to CampusCollab? <Link to="/register" className="font-semibold text-brand-600 hover:underline">Create an account</Link></p></form></AuthLayout>}
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useState } from "react";
+import { useForm } from "react-hook-form";
+import { Link, useLocation, useNavigate } from "react-router-dom";
+import { z } from "zod";
+import { FormField } from "../components/FormField.jsx";
+import { Spinner } from "../components/Spinner.jsx";
+import { useAuth } from "../context/auth-context.js";
+import { useToast } from "../context/toast-context.js";
+import { AuthLayout } from "../layouts/AuthLayout.jsx";
+import { apiError } from "../services/api.js";
+const schema = z.object({
+  email: z.string().email("Enter a valid university email"),
+  password: z.string().min(1, "Enter your password"),
+  remember: z.boolean(),
+});
+export function LoginPage() {
+  const [submitting, setSubmitting] = useState(false);
+  const { login } = useAuth();
+  const { notify } = useToast();
+  const navigate = useNavigate();
+  const location = useLocation();
+  const {
+    register,
+    handleSubmit,
+    setError,
+    formState: { errors },
+  } = useForm({
+    resolver: zodResolver(schema),
+    defaultValues: { remember: false },
+  });
+  const submit = async (values) => {
+    setSubmitting(true);
+    try {
+      await login(values);
+      notify("Welcome back to CampusCollab.");
+      navigate(location.state?.from?.pathname || "/dashboard", {
+        replace: true,
+      });
+    } catch (error) {
+      const parsed = apiError(error);
+      setError("root", { message: parsed.message });
+    } finally {
+      setSubmitting(false);
+    }
+  };
+  return (
+    <AuthLayout
+      eyebrow="Welcome back"
+      title="Sign in to your account"
+      subtitle="Continue building, collaborating, and creating opportunities on campus."
+    >
+      <form onSubmit={handleSubmit(submit)} className="space-y-5" noValidate>
+        {location.state?.registrationMessage && (
+          <p
+            className="rounded-xl bg-emerald-50 p-3 text-sm text-emerald-700"
+            role="status"
+          >
+            {location.state.registrationMessage}
+          </p>
+        )}
+        <FormField
+          label="University email"
+          type="email"
+          autoComplete="email"
+          placeholder="you@university.edu"
+          error={errors.email?.message}
+          {...register("email")}
+        />
+        <FormField
+          label="Password"
+          type="password"
+          autoComplete="current-password"
+          placeholder="Enter your password"
+          error={errors.password?.message}
+          {...register("password")}
+        />
+        <div className="flex items-center justify-between text-sm">
+          <label className="flex items-center gap-2 text-slate-600">
+            <input
+              type="checkbox"
+              className="size-4 accent-brand-600"
+              {...register("remember")}
+            />
+            Keep me signed in
+          </label>
+          <Link
+            className="font-semibold text-brand-600 hover:underline"
+            to="/forgot-password"
+          >
+            Forgot password?
+          </Link>
+        </div>
+        {errors.root && (
+          <p
+            className="rounded-xl bg-rose-50 p-3 text-sm text-rose-700"
+            role="alert"
+          >
+            {errors.root.message}
+          </p>
+        )}
+        <button className="btn-primary w-full" disabled={submitting}>
+          {submitting ? <Spinner label="Signing in" /> : "Sign in"}
+        </button>
+        <p className="text-center text-sm text-slate-600">
+          New to CampusCollab?{" "}
+          <Link
+            to="/register"
+            className="font-semibold text-brand-600 hover:underline"
+          >
+            Create an account
+          </Link>
+        </p>
+      </form>
+    </AuthLayout>
+  );
+}

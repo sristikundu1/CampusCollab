@@ -19,7 +19,7 @@ services:
       - key: MONGODB_DB_NAME
         value: CampusCollab
       - key: REQUIRE_EMAIL_VERIFICATION
-        value: true
+        value: false
       - key: SESSION_SECRET
         generateValue: true
       - key: CSRF_SECRET
@@ -30,15 +30,5 @@ services:
         sync: false
       - key: API_URL
         sync: false
-      - key: SMTP_HOST
-        sync: false
-      - key: SMTP_PORT
-        value: 587
-      - key: SMTP_SECURE
-        value: false
-      - key: SMTP_USER
-        sync: false
-      - key: SMTP_PASSWORD
-        sync: false
-      - key: EMAIL_FROM
+      - key: REDIS_URL
         sync: false

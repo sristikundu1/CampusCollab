@@ -1,5 +1,7 @@
 # CampusCollab — Phase 5 Backend Foundation and Mongoose Models
 
+> Historical phase snapshot: later phases implemented authentication, profiles, gigs, proposals, projects, collaboration, and Redis-backed production rate limiting. The statements below describe the Phase 5 boundary when it was completed; use the root README and `docs/setup/environment-variables.md` for current runtime instructions.
+
 **Status:** Implemented foundation  
 **Boundary:** Infrastructure and Phase 3 Mongoose models only; no business APIs or authentication workflow  
 **Runtime:** Node.js 24 available; project supports Node.js 22+  

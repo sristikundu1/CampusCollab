@@ -4,11 +4,11 @@
 **Authentication decision:** opaque, revocable server-side sessions stored as hashed tokens; no JWT variables are used.  
 **Rule:** `.env.example` contains names and placeholders only. Create `.env` locally yourself and never commit it.
 
-For local development only, `REQUIRE_EMAIL_VERIFICATION=false` permits accounts from active university domains to sign in without inbox verification. Production configuration rejects this setting. Restore it to `true` as soon as SMTP is configured.
+During the current stabilization phase, `REQUIRE_EMAIL_VERIFICATION=false` permits accounts from active university domains to sign in without inbox verification. This is an explicit product limitation: a matching address domain does not prove mailbox ownership. Email verification and password recovery are deferred and must be reviewed before CampusCollab is opened to real university users.
 
 `MONGODB_DB_NAME` explicitly selects the application database. Use `CampusCollab`; without an explicit database selection, MongoDB drivers commonly fall back to `test`.
 
-> **Phase 5 bootstrap:** only `NODE_ENV`, `PORT`, `MONGODB_URI`, `CLIENT_URL`, `API_URL`, `LOG_LEVEL`, and `TRUST_PROXY` are needed to boot the current backend. Session/CSRF values are accepted but not required until authentication is implemented. SMTP, Redis, and Cloudinary variables are not loaded or required in Phase 5.
+> **Current runtime:** MongoDB, session, and CSRF values are required. Redis is optional for a single local process and required when `NODE_ENV=production`. SMTP is optional while email verification remains disabled. Cloudinary is not used by the implemented application.
 
 ## 1. Configuration classes
 
@@ -79,11 +79,11 @@ Choose an SMTP-capable transactional provider or a development mail sandbox. Obt
 
 ### 2.4 Cloudinary/object storage
 
-The proposed MVP uses Cloudinary for attachments and portfolio media. Create an account/environment and obtain `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`, and `CLOUDINARY_API_SECRET`. Configure allowed formats, byte limits, signed uploads, private/authenticated delivery where appropriate, deletion rules, and malware-scanning workflow. The API secret is backend-only. If another object store is approved, replace these variables through an architecture change rather than supporting two unused providers.
+File uploads are not implemented in the current application. Do not provision Cloudinary for this stabilization phase. Revisit storage credentials, upload limits, signed delivery, deletion, and malware scanning only when file uploads become an approved feature.
 
 ### 2.5 Redis
 
-Redis is optional for a single-process local implementation if an in-memory limiter and synchronous development jobs are explicitly used. It is required before horizontally scaled production for shared rate-limit state, reliable job coordination, and later Socket.IO multi-instance fan-out. Local development can run Redis locally; production should use authenticated TLS and separate environments.
+Redis is optional for a single-process local implementation. It is mandatory when `NODE_ENV=production` because authentication, proposal, participation, and global rate limits must share state across instances. Local development can use the in-memory fallback; production should use an authenticated TLS `rediss://` connection and separate environments.
 
 ### 2.6 Application URLs
 

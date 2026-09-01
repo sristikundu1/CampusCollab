@@ -2,28 +2,104 @@
 
 @theme {
   --font-sans: Inter, ui-sans-serif, system-ui, sans-serif;
-  --color-brand-50: #eef4ff; --color-brand-100: #dbe8ff; --color-brand-300: #93b4ff; --color-brand-500: #3b6eea;
-  --color-brand-600: #2856cc; --color-brand-700: #2147a8; --color-brand-950: #172554;
+  --color-brand-50: #eef4ff;
+  --color-brand-100: #dbe8ff;
+  --color-brand-300: #93b4ff;
+  --color-brand-500: #3b6eea;
+  --color-brand-600: #2856cc;
+  --color-brand-700: #2147a8;
+  --color-brand-950: #172554;
 }
 
-:root { font-family: var(--font-sans); color: #172033; background: #f6f8fc; font-synthesis: none; }
-* { box-sizing: border-box; }
-body { margin: 0; min-width: 320px; min-height: 100vh; }
-button, a, input, textarea, select { outline-color: #3b6eea; }
-.surface { @apply rounded-2xl border border-slate-200/80 bg-white shadow-[0_14px_45px_rgba(23,37,84,0.08)]; }
-.field { @apply w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 transition placeholder:text-slate-400 focus:border-brand-500 focus:ring-4 focus:ring-brand-100; }
-.btn-primary { @apply inline-flex items-center justify-center gap-2 rounded-xl bg-brand-600 px-5 py-3 text-sm font-semibold text-white transition hover:bg-brand-700 focus:ring-4 focus:ring-brand-100 disabled:cursor-not-allowed disabled:opacity-60; }
-.btn-secondary { @apply inline-flex items-center justify-center gap-2 rounded-xl border border-slate-300 bg-white px-5 py-3 text-sm font-semibold text-slate-700 transition hover:border-brand-300 hover:bg-brand-50; }
-.eyebrow { @apply text-xs font-bold uppercase tracking-[0.18em] text-brand-600; }
+:root {
+  font-family: var(--font-sans);
+  color: #172033;
+  background: #f6f8fc;
+  font-synthesis: none;
+}
+* {
+  box-sizing: border-box;
+}
+body {
+  margin: 0;
+  min-width: 320px;
+  min-height: 100vh;
+}
+button,
+a,
+input,
+textarea,
+select {
+  outline-color: #3b6eea;
+}
+.surface {
+  @apply rounded-2xl border border-slate-200/80 bg-white shadow-[0_14px_45px_rgba(23,37,84,0.08)];
+}
+.field {
+  @apply w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 transition placeholder:text-slate-400 focus:border-brand-500 focus:ring-4 focus:ring-brand-100;
+}
+.relative > svg.absolute + .field {
+  padding-left: 3rem;
+}
+.btn-primary {
+  @apply inline-flex items-center justify-center gap-2 rounded-xl bg-brand-600 px-5 py-3 text-sm font-semibold text-white transition hover:bg-brand-700 focus:ring-4 focus:ring-brand-100 disabled:cursor-not-allowed disabled:opacity-60;
+}
+.btn-secondary {
+  @apply inline-flex items-center justify-center gap-2 rounded-xl border border-slate-300 bg-white px-5 py-3 text-sm font-semibold text-slate-700 transition hover:border-brand-300 hover:bg-brand-50;
+}
+.eyebrow {
+  @apply text-xs font-bold uppercase tracking-[0.18em] text-brand-600;
+}
 
-.campus-swal-popup { border: 1px solid #e2e8f0 !important; border-radius: 1.5rem !important; padding: 1.5rem !important; box-shadow: 0 24px 80px rgba(23,37,84,.2) !important; }
-.campus-swal-title { color: #0f172a !important; font-size: 1.35rem !important; font-weight: 750 !important; padding-top: .5rem !important; }
-.campus-swal-copy { color: #64748b !important; font-size: .95rem !important; line-height: 1.6 !important; }
-.campus-swal-actions { gap: .75rem !important; margin-top: 1.5rem !important; }
-.campus-swal-confirm, .campus-swal-danger, .campus-swal-cancel { border-radius: .75rem !important; padding: .75rem 1.15rem !important; font-size: .875rem !important; font-weight: 700 !important; transition: .2s ease !important; }
-.campus-swal-confirm { background: #2856cc !important; color: white !important; }
-.campus-swal-confirm:hover { background: #2147a8 !important; }
-.campus-swal-danger { background: #e11d48 !important; color: white !important; }
-.campus-swal-danger:hover { background: #be123c !important; }
-.campus-swal-cancel { border: 1px solid #cbd5e1 !important; background: white !important; color: #475569 !important; }
-.campus-swal-cancel:hover { background: #f8fafc !important; }
+.campus-swal-popup {
+  border: 1px solid #e2e8f0 !important;
+  border-radius: 1.5rem !important;
+  padding: 1.5rem !important;
+  box-shadow: 0 24px 80px rgba(23, 37, 84, 0.2) !important;
+}
+.campus-swal-title {
+  color: #0f172a !important;
+  font-size: 1.35rem !important;
+  font-weight: 750 !important;
+  padding-top: 0.5rem !important;
+}
+.campus-swal-copy {
+  color: #64748b !important;
+  font-size: 0.95rem !important;
+  line-height: 1.6 !important;
+}
+.campus-swal-actions {
+  gap: 0.75rem !important;
+  margin-top: 1.5rem !important;
+}
+.campus-swal-confirm,
+.campus-swal-danger,
+.campus-swal-cancel {
+  border-radius: 0.75rem !important;
+  padding: 0.75rem 1.15rem !important;
+  font-size: 0.875rem !important;
+  font-weight: 700 !important;
+  transition: 0.2s ease !important;
+}
+.campus-swal-confirm {
+  background: #2856cc !important;
+  color: white !important;
+}
+.campus-swal-confirm:hover {
+  background: #2147a8 !important;
+}
+.campus-swal-danger {
+  background: #e11d48 !important;
+  color: white !important;
+}
+.campus-swal-danger:hover {
+  background: #be123c !important;
+}
+.campus-swal-cancel {
+  border: 1px solid #cbd5e1 !important;
+  background: white !important;
+  color: #475569 !important;
+}
+.campus-swal-cancel:hover {
+  background: #f8fafc !important;
+}

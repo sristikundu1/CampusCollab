@@ -1,10 +1,113 @@
-import { z } from 'zod';
-const empty=z.object({}).strict();const noBody=z.union([z.undefined(),empty]).optional();const id=z.string().regex(/^[a-f\d]{24}$/i,'Invalid identifier');const note=z.string().trim().max(3000).transform((v)=>v||undefined).optional();
-const projectOpening=z.object({projectId:id,openingId:id}).strict();const requestId=z.object({requestId:id}).strict();const invitationId=z.object({invitationId:id}).strict();const membership=z.object({projectId:id,membershipId:id}).strict();const project=z.object({projectId:id}).strict();
-const list=z.object({status:z.string().trim().max(40).optional(),cursor:z.string().max(1024).optional(),limit:z.coerce.number().int().min(1).max(50).default(20)}).strict();
-export const submitJoinRequest=z.object({params:projectOpening,query:empty,body:z.object({message:z.string().trim().min(1).max(3000)}).strict()});
-export const joinListRequest=z.object({params:empty,query:list,body:noBody});export const projectJoinListRequest=z.object({params:project,query:list,body:noBody});export const joinItemRequest=z.object({params:requestId,query:empty,body:noBody});export const joinCommandRequest=z.object({params:requestId,query:empty,body:z.object({reason:note}).strict().optional().default({})});
-export const sendInvitationRequest=z.object({params:projectOpening,query:empty,body:z.object({inviteeId:id,message:note,expiresInDays:z.number().int().min(1).max(30).default(14)}).strict()});
-export const invitationListRequest=z.object({params:empty,query:list,body:noBody});export const projectInvitationListRequest=z.object({params:project,query:list,body:noBody});export const invitationItemRequest=z.object({params:invitationId,query:empty,body:noBody});export const invitationCommandRequest=z.object({params:invitationId,query:empty,body:z.object({reason:note}).strict().optional().default({})});
-export const membersRequest=z.object({params:project,query:empty,body:noBody});export const membershipCommandRequest=z.object({params:membership,query:empty,body:z.object({reason:note}).strict().optional().default({})});
-export const candidateRequest=z.object({params:project,query:z.object({q:z.string().trim().min(2).max(80),limit:z.coerce.number().int().min(1).max(20).default(10)}).strict(),body:noBody});
+import { z } from "zod";
+const empty = z.object({}).strict();
+const noBody = z.union([z.undefined(), empty]).optional();
+const id = z.string().regex(/^[a-f\d]{24}$/i, "Invalid identifier");
+const note = z
+  .string()
+  .trim()
+  .max(3000)
+  .transform((v) => v || undefined)
+  .optional();
+const projectOpening = z.object({ projectId: id, openingId: id }).strict();
+const requestId = z.object({ requestId: id }).strict();
+const invitationId = z.object({ invitationId: id }).strict();
+const membership = z.object({ projectId: id, membershipId: id }).strict();
+const project = z.object({ projectId: id }).strict();
+const joinStatus = z.enum([
+  "PENDING",
+  "ACCEPTED",
+  "REJECTED",
+  "WITHDRAWN",
+  "EXPIRED",
+]);
+const invitationStatus = z.enum([
+  "PENDING",
+  "ACCEPTED",
+  "REJECTED",
+  "REVOKED",
+  "EXPIRED",
+]);
+const list = (status) =>
+  z
+    .object({
+      status: status.optional(),
+      cursor: z.string().max(1024).optional(),
+      limit: z.coerce.number().int().min(1).max(50).default(20),
+    })
+    .strict();
+export const submitJoinRequest = z.object({
+  params: projectOpening,
+  query: empty,
+  body: z.object({ message: z.string().trim().min(1).max(3000) }).strict(),
+});
+export const joinListRequest = z.object({
+  params: empty,
+  query: list(joinStatus),
+  body: noBody,
+});
+export const projectJoinListRequest = z.object({
+  params: project,
+  query: list(joinStatus),
+  body: noBody,
+});
+export const joinItemRequest = z.object({
+  params: requestId,
+  query: empty,
+  body: noBody,
+});
+export const joinCommandRequest = z.object({
+  params: requestId,
+  query: empty,
+  body: z.object({ reason: note }).strict().optional().default({}),
+});
+export const sendInvitationRequest = z.object({
+  params: projectOpening,
+  query: empty,
+  body: z
+    .object({
+      inviteeId: id,
+      message: note,
+      expiresInDays: z.number().int().min(1).max(30).default(14),
+    })
+    .strict(),
+});
+export const invitationListRequest = z.object({
+  params: empty,
+  query: list(invitationStatus),
+  body: noBody,
+});
+export const projectInvitationListRequest = z.object({
+  params: project,
+  query: list(invitationStatus),
+  body: noBody,
+});
+export const invitationItemRequest = z.object({
+  params: invitationId,
+  query: empty,
+  body: noBody,
+});
+export const invitationCommandRequest = z.object({
+  params: invitationId,
+  query: empty,
+  body: z.object({ reason: note }).strict().optional().default({}),
+});
+export const membersRequest = z.object({
+  params: project,
+  query: empty,
+  body: noBody,
+});
+export const membershipCommandRequest = z.object({
+  params: membership,
+  query: empty,
+  body: z.object({ reason: note }).strict().optional().default({}),
+});
+export const candidateRequest = z.object({
+  params: project,
+  query: z
+    .object({
+      q: z.string().trim().min(2).max(80),
+      limit: z.coerce.number().int().min(1).max(20).default(10),
+    })
+    .strict(),
+  body: noBody,
+});

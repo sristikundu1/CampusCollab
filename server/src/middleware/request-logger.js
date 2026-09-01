@@ -1,8 +1,9 @@
 export function createRequestLogger(logger, environment) {
   return function requestLogger(request, response, next) {
     const startedAt = process.hrtime.bigint();
-    response.on('finish', () => {
-      const durationMs = Number(process.hrtime.bigint() - startedAt) / 1_000_000;
+    response.on("finish", () => {
+      const durationMs =
+        Number(process.hrtime.bigint() - startedAt) / 1_000_000;
       logger.info(
         {
           requestId: request.id,
@@ -12,10 +13,9 @@ export function createRequestLogger(logger, environment) {
           durationMs: Math.round(durationMs * 100) / 100,
           environment,
         },
-        'HTTP request completed',
+        "HTTP request completed",
       );
     });
     next();
   };
 }
-
