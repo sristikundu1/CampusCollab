@@ -61,3 +61,15 @@ export const proposalApi = {
   accept: (proposalId, body = {}) => api.post(`/proposals/${proposalId}:accept`, body, idempotent()),
   reject: (proposalId, body = {}) => api.post(`/proposals/${proposalId}:reject`, body, idempotent()),
 };
+
+export const projectApi = {
+  list:(params={})=>api.get('/projects',{params}), mine:(params={})=>api.get('/projects/mine',{params}), get:(id)=>api.get(`/projects/${id}`), create:(body)=>api.post('/projects',body), update:(id,body)=>api.patch(`/projects/${id}`,body),
+  publish:(id)=>api.post(`/projects/${id}:publish`,{},idempotent()), transition:(id,toStatus,reason)=>api.post(`/projects/${id}:transition`,{toStatus,...(reason?{reason}:{})},idempotent()), recruitment:(id,acceptingMembers)=>api.patch(`/projects/${id}/recruitment`,{acceptingMembers},idempotent()),
+  addOpening:(id,body)=>api.post(`/projects/${id}/openings`,body), updateOpening:(id,openingId,body)=>api.patch(`/projects/${id}/openings/${openingId}`,body), openingState:(id,openingId,action)=>api.post(`/projects/${id}/openings/${openingId}:${action}`,{},idempotent()),
+  joins:(id,params={})=>api.get(`/projects/${id}/join-requests`,{params}), invitations:(id,params={})=>api.get(`/projects/${id}/invitations`,{params}), members:(id)=>api.get(`/projects/${id}/members`), candidates:(id,q)=>api.get(`/projects/${id}/invite-candidates`,{params:{q}}),
+};
+export const participationApi = {
+  requestJoin:(projectId,openingId,message)=>api.post(`/projects/${projectId}/openings/${openingId}/join-requests`,{message},idempotent()), myJoins:(params={})=>api.get('/join-requests/mine',{params}), joinAction:(id,action,reason)=>api.post(`/join-requests/${id}:${action}`,reason?{reason}:{},idempotent()),
+  invite:(projectId,openingId,body)=>api.post(`/projects/${projectId}/openings/${openingId}/invitations`,body,idempotent()), myInvitations:(params={})=>api.get('/invitations/mine',{params}), invitationAction:(id,action,reason)=>api.post(`/invitations/${id}:${action}`,reason?{reason}:{},idempotent()),
+  leave:(projectId,membershipId)=>api.post(`/projects/${projectId}/members/${membershipId}:leave`,{},idempotent()), remove:(projectId,membershipId)=>api.post(`/projects/${projectId}/members/${membershipId}:remove`,{},idempotent()),
+};

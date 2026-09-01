@@ -1,0 +1,3 @@
+import assert from 'node:assert/strict';import test from 'node:test';import { targetProjectState } from '../../src/modules/projects/project-lifecycle.js';
+test('project lifecycle permits only approved non-completion transitions',()=>{assert.equal(targetProjectState('DRAFT','RECRUITING'),'RECRUITING');assert.equal(targetProjectState('RECRUITING','ACTIVE'),'ACTIVE');assert.equal(targetProjectState('ACTIVE','CANCELLED'),'CANCELLED');assert.equal(targetProjectState('CANCELLED','ARCHIVED'),'ARCHIVED')});
+test('project lifecycle rejects reverse, completion, and invented transitions',()=>{for(const pair of [['ACTIVE','RECRUITING'],['DRAFT','ACTIVE'],['ACTIVE','COMPLETED'],['ARCHIVED','DRAFT']])assert.throws(()=>targetProjectState(...pair),(e)=>e.code==='INVALID_STATE')});

@@ -15,8 +15,10 @@ import { createProfileService } from './modules/profiles/profile.service.js';
 import { createSkillService } from './modules/skills/skill.service.js';
 import { createGigService } from './modules/gigs/gig.service.js';
 import { createProposalService } from './modules/proposals/proposal.service.js';
+import { createProjectService } from './modules/projects/project.service.js';
+import { createParticipationService } from './modules/participation/participation.service.js';
 
-export function createApp({ config, logger, databaseReadiness, authService: authServiceOverride, emailService: emailServiceOverride, profileService: profileServiceOverride, skillService: skillServiceOverride, gigService: gigServiceOverride, proposalService: proposalServiceOverride }) {
+export function createApp({ config, logger, databaseReadiness, authService: authServiceOverride, emailService: emailServiceOverride, profileService: profileServiceOverride, skillService: skillServiceOverride, gigService: gigServiceOverride, proposalService: proposalServiceOverride, projectService: projectServiceOverride, participationService: participationServiceOverride }) {
   const app = express();
   const emailService = emailServiceOverride ?? createEmailService(config, logger);
   const authService = authServiceOverride ?? createAuthService({ config, emailService });
@@ -24,6 +26,8 @@ export function createApp({ config, logger, databaseReadiness, authService: auth
   const skillService = skillServiceOverride ?? createSkillService();
   const gigService = gigServiceOverride ?? createGigService({ config });
   const proposalService = proposalServiceOverride ?? createProposalService({ config });
+  const projectService = projectServiceOverride ?? createProjectService({ config });
+  const participationService = participationServiceOverride ?? createParticipationService({ config });
   app.disable('x-powered-by');
   app.set('trust proxy', config.trustProxy);
   app.use(requestContext);
@@ -70,7 +74,7 @@ export function createApp({ config, logger, databaseReadiness, authService: auth
   app.get('/ready', ready);
   app.get('/health/live', health);
   app.get('/health/ready', ready);
-  app.use('/api/v1', createV1Router({ config, authService, profileService, skillService, gigService, proposalService }));
+  app.use('/api/v1', createV1Router({ config, authService, profileService, skillService, gigService, proposalService, projectService, participationService }));
   app.use(notFoundHandler);
   app.use(createErrorHandler({ logger, environment: config.nodeEnv }));
   return app;

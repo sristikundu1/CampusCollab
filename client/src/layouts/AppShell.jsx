@@ -1,11 +1,11 @@
-import { Bookmark, BriefcaseBusiness, FileText, LayoutDashboard, LogOut, Menu, Search, UserRound, X } from 'lucide-react';
+import { Bookmark, BriefcaseBusiness, FileText, FolderKanban, LayoutDashboard, LogOut, MailCheck, Menu, Search, UserPlus, UserRound, X } from 'lucide-react';
 import { useState } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { Logo } from '../components/Logo.jsx';
 import { useAuth } from '../context/auth-context.js';
 import { useToast } from '../context/toast-context.js';
 
-const links = [{ to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard }, { to: '/gigs', label: 'Discover gigs', icon: Search }, { to: '/my-gigs', label: 'My gigs', icon: BriefcaseBusiness }, { to: '/proposals', label: 'My proposals', icon: FileText }, { to: '/bookmarks', label: 'Bookmarks', icon: Bookmark }, { to: '/profile', label: 'Profile', icon: UserRound }];
+const links = [{ to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard }, { to: '/gigs', label: 'Discover gigs', icon: Search }, { to: '/my-gigs', label: 'My gigs', icon: BriefcaseBusiness }, { to: '/proposals', label: 'My proposals', icon: FileText }, { to: '/projects', label: 'Discover projects', icon: FolderKanban }, { to: '/my-projects', label: 'My projects', icon: FolderKanban }, { to: '/join-requests', label: 'Join requests', icon: UserPlus }, { to: '/invitations', label: 'Invitations', icon: MailCheck }, { to: '/bookmarks', label: 'Bookmarks', icon: Bookmark }, { to: '/profile', label: 'Profile', icon: UserRound }];
 
 export function AppShell({ children }) {
   const [open, setOpen] = useState(false); const { user, logout } = useAuth(); const { notify } = useToast(); const navigate = useNavigate();

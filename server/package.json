@@ -14,6 +14,7 @@
     "test:unit": "node --test --test-concurrency=1 tests/unit",
     "test:smoke:profile": "node scripts/smoke-profile-api.js",
     "test:smoke:gigs": "node scripts/smoke-gigs-api.js",
+    "test:smoke:projects": "node scripts/smoke-projects-api.js",
     "check": "node scripts/check-project.js",
     "db:verify-indexes": "node scripts/verify-database-indexes.js",
     "db:seed:uiu": "node scripts/seed-uiu.js",

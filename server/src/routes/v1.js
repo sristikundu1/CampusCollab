@@ -4,6 +4,8 @@ import { createProfileRouter } from '../modules/profiles/profile.routes.js';
 import { createSkillRouter } from '../modules/skills/skill.routes.js';
 import { createGigRouter } from '../modules/gigs/gig.routes.js';
 import { createProposalRouter } from '../modules/proposals/proposal.routes.js';
+import { createProjectRouter } from '../modules/projects/project.routes.js';
+import { createParticipationRouter } from '../modules/participation/participation.routes.js';
 
 export function createV1Router(dependencies) {
   const router = Router();
@@ -15,5 +17,7 @@ export function createV1Router(dependencies) {
   router.use('/skills', createSkillRouter(dependencies));
   router.use(createGigRouter(dependencies));
   router.use(createProposalRouter(dependencies));
+  router.use(createProjectRouter(dependencies));
+  router.use(createParticipationRouter(dependencies));
   return router;
 }
