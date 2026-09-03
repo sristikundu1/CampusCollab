@@ -10,6 +10,14 @@ const optionalText = (max) =>
     .max(max)
     .transform((value) => value || undefined)
     .optional();
+const avatarUrl = z
+  .string()
+  .max(80000, "Profile image is too large")
+  .refine(
+    (value) =>
+      /^data:image\/(?:jpeg|png|webp);base64,[A-Za-z0-9+/]+={0,2}$/.test(value),
+    "Profile image must be a JPEG, PNG, or WebP image",
+  );
 const httpsUrl = z
   .string()
   .trim()
@@ -43,6 +51,7 @@ const education = z
 
 const profileFields = {
   displayName: z.string().trim().min(2).max(80).optional(),
+  avatarUrl: z.union([avatarUrl, z.null()]).optional(),
   headline: optionalText(120),
   department: optionalText(120),
   graduationYear: z.number().int().min(1900).max(2200).nullable().optional(),
@@ -54,6 +63,7 @@ const profileFields = {
   educationEntries: z.array(education).max(10).optional(),
   externalLinks: z.array(link).max(10).optional(),
   visibility: z.enum(["PLATFORM", "UNIVERSITY", "PRIVATE"]).optional(),
+  onboardingStatus: z.enum(["COMPLETE", "SKIPPED"]).optional(),
 };
 const strictPartialProfile = z
   .object(profileFields)

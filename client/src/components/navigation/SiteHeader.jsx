@@ -37,13 +37,16 @@ export function SiteHeader() {
         </nav>
         <div className="flex justify-end">
           {loading ? (
-            <span className="grid size-10 place-items-center text-brand-600">
-              <Spinner label="Loading account" />
+            <span
+              className="grid size-10 place-items-center text-brand-600"
+              aria-label="Loading account"
+            >
+              <Spinner label="" />
             </span>
           ) : isAuthenticated ? (
             <UserMenu />
           ) : (
-            <Link to="/register" className="btn-primary !px-4 !py-2.5">
+            <Link to="/login" className="btn-primary !px-4 !py-2.5">
               Get Started
             </Link>
           )}

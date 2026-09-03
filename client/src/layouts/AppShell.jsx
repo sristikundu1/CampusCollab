@@ -36,10 +36,10 @@ const links = [
 export function AppShell({ children }) {
   const [open, setOpen] = useState(false);
   return (
-    <div className="min-h-screen bg-slate-50">
-      <header className="sticky top-0 z-30 border-b border-slate-200 bg-white/90 backdrop-blur">
-        <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6">
-          <div className="flex items-center gap-2">
+    <div className="flex h-screen min-h-0 flex-col overflow-hidden bg-slate-50">
+      <header className="z-30 shrink-0 border-b border-slate-200 bg-white/95 backdrop-blur">
+        <div className="mx-auto flex h-16 w-full max-w-7xl items-center justify-between px-4 sm:px-6">
+          <div className="flex min-w-0 items-center gap-2 overflow-visible">
             <button
               className="rounded-xl p-2 text-slate-600 hover:bg-slate-100 lg:hidden"
               onClick={() => setOpen(!open)}
@@ -52,9 +52,9 @@ export function AppShell({ children }) {
           <UserMenu />
         </div>
       </header>
-      <div className="mx-auto grid max-w-7xl lg:grid-cols-[220px_1fr]">
+      <div className="mx-auto grid min-h-0 w-full max-w-7xl flex-1 lg:grid-cols-[220px_minmax(0,1fr)]">
         <aside
-          className={`${open ? "block" : "hidden"} border-b border-slate-200 bg-white p-4 lg:block lg:min-h-[calc(100vh-4rem)] lg:border-b-0 lg:border-r`}
+          className={`${open ? "block overflow-y-auto" : "hidden"} border-b border-slate-200 bg-white p-4 lg:block lg:min-h-0 lg:overflow-y-auto lg:border-b-0 lg:border-r`}
         >
           <nav className="space-y-1">
             {links.map(({ to, label, icon: Icon }) => (
@@ -72,7 +72,9 @@ export function AppShell({ children }) {
             ))}
           </nav>
         </aside>
-        <main className="min-w-0 p-4 sm:p-6 lg:p-10">{children}</main>
+        <main className="min-h-0 min-w-0 overflow-y-auto p-4 sm:p-6 lg:p-10">
+          {children}
+        </main>
       </div>
     </div>
   );

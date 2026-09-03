@@ -50,6 +50,7 @@ const profileSchema = addVersion(
     {
       userId: { type: objectId, ref: "User", required: true, immutable: true },
       displayName: textField({ required: true, min: 2, max: 80 }),
+      avatarUrl: textField({ max: 80000 }),
       headline: textField({ max: 120 }),
       department: textField({ max: 120 }),
       graduationYear: intField({ required: false, min: 1900, max: 2200 }),
@@ -104,6 +105,12 @@ const profileSchema = addVersion(
         type: String,
         enum: ["VISIBLE", "RESTRICTED", "HIDDEN"],
         default: "VISIBLE",
+        required: true,
+      },
+      onboardingStatus: {
+        type: String,
+        enum: ["PENDING", "COMPLETE", "SKIPPED"],
+        default: "COMPLETE",
         required: true,
       },
       preferences: { type: Schema.Types.Mixed, default: {}, select: false },

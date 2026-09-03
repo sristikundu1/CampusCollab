@@ -18,6 +18,7 @@ import { AvailabilityEditor } from "../components/profile/AvailabilityEditor.jsx
 import { PortfolioSection } from "../components/profile/PortfolioSection.jsx";
 import { ProfileEditor } from "../components/profile/ProfileEditor.jsx";
 import { SkillsEditor } from "../components/profile/SkillsEditor.jsx";
+import { Avatar } from "../components/Avatar.jsx";
 import { useAuth } from "../context/auth-context.js";
 import { useToast } from "../context/toast-context.js";
 import { AppShell } from "../layouts/AppShell.jsx";
@@ -39,7 +40,7 @@ function ProfileSkeleton() {
 }
 
 export function ProfilePage() {
-  const { refreshUser } = useAuth();
+  const { user, syncProfileSummary } = useAuth();
   const { notify } = useToast();
   const [profile, setProfile] = useState(null);
   const [items, setItems] = useState([]);
@@ -74,10 +75,12 @@ export function ProfilePage() {
     setBusy(key);
     try {
       const result = await work();
-      if (result?.profile) setProfile(result.profile);
+      if (result?.profile) {
+        setProfile(result.profile);
+        syncProfileSummary?.(result.profile);
+      }
       if (result?.items) setItems(result.items);
       notify(message);
-      await refreshUser();
       return true;
     } catch (reason) {
       notify(apiError(reason).message, "error");
@@ -182,12 +185,6 @@ export function ProfilePage() {
       "Portfolio project removed.",
     );
   };
-  const initials = profile.displayName
-    .split(/\s+/)
-    .map((part) => part[0])
-    .slice(0, 2)
-    .join("")
-    .toUpperCase();
   const VisibilityIcon = profile.visibility === "PRIVATE" ? LockKeyhole : Eye;
   return (
     <AppShell>
@@ -217,91 +214,91 @@ export function ProfilePage() {
         {editing && (
           <ProfileEditor
             profile={profile}
+            email={profile.email || user?.email}
             saving={busy === "profile"}
             onCancel={() => setEditing(false)}
             onSave={saveProfile}
           />
         )}
-        <section className="surface mt-6 overflow-hidden">
-          <div className="relative h-36 bg-[radial-gradient(circle_at_78%_20%,#60a5fa_0,transparent_25%),radial-gradient(circle_at_15%_90%,#4338ca_0,transparent_30%),linear-gradient(120deg,#172554,#2856cc)] sm:h-40">
-            <div className="absolute inset-0 opacity-20 [background-image:radial-gradient(circle_at_center,white_1px,transparent_1px)] [background-size:22px_22px]" />
-          </div>
-          <div className="px-5 pb-7 sm:px-8">
-            <div className="-mt-12 flex flex-col gap-4 sm:-mt-14 sm:flex-row sm:items-end">
-              <div
-                className="grid size-24 shrink-0 place-items-center rounded-full border-4 border-white bg-brand-100 text-2xl font-black text-brand-700 shadow-lg sm:size-28 sm:text-3xl"
-                aria-label="Profile avatar"
-              >
-                {initials}
-              </div>
-              <div className="min-w-0 flex-1 pb-1">
-                <h2 className="text-2xl font-black tracking-tight text-slate-950 sm:text-3xl">
-                  {profile.displayName}
-                </h2>
-                <p className="mt-1 font-medium text-slate-600">
-                  {profile.headline || "Add a professional headline"}
-                </p>
-                <div className="mt-2 flex flex-wrap gap-2 text-xs font-semibold text-slate-500">
-                  <span className="inline-flex items-center gap-1">
-                    <GraduationCap size={14} />
-                    {profile.university?.name || "University unavailable"}
-                  </span>
-                  <span className="inline-flex items-center gap-1">
-                    <ShieldCheck size={14} />
-                    {profile.universityVerification?.status === "VERIFIED"
-                      ? "Verified university email"
-                      : "UIU domain member"}
-                  </span>
-                  <span className="inline-flex items-center gap-1">
-                    <VisibilityIcon size={14} />
-                    {profile.visibility.toLowerCase()}
-                  </span>
-                </div>
-              </div>
-              <div className="w-full rounded-2xl border border-slate-200 bg-slate-50 p-4 sm:w-56">
-                <div className="flex items-center justify-between text-sm">
-                  <span className="font-semibold">Profile completion</span>
-                  <strong className="text-brand-700">
-                    {profile.completionScore}%
-                  </strong>
-                </div>
-                <div className="mt-2 h-2 overflow-hidden rounded-full bg-slate-200">
-                  <div
-                    className="h-full rounded-full bg-brand-600 transition-all"
-                    style={{ width: `${profile.completionScore}%` }}
-                  />
-                </div>
-                <p className="mt-2 flex items-center gap-1 text-xs text-slate-500">
-                  {profile.isCompleteForApplications ? (
-                    <>
-                      <CheckCircle2 size={13} className="text-emerald-600" />
-                      Ready for applications
-                    </>
-                  ) : (
-                    <>
-                      <LoaderCircle size={13} />
-                      Keep building your profile
-                    </>
-                  )}
-                </p>
+        <section className="surface mt-6 p-5 sm:p-7">
+          <div className="flex flex-col gap-5 sm:flex-row sm:items-center">
+            <Avatar
+              src={profile.avatarUrl}
+              email={profile.email || user?.email}
+              initial={profile.avatarInitial}
+              name={profile.displayName}
+              className="size-24 border-4 border-white text-3xl shadow-md sm:size-28"
+            />
+            <div className="min-w-0 flex-1">
+              <h2 className="text-2xl font-black tracking-tight text-slate-950 sm:text-3xl">
+                {profile.displayName || "CampusCollab member"}
+              </h2>
+              <p className="mt-1 truncate text-sm font-medium text-slate-500">
+                {profile.email || user?.email}
+              </p>
+              <p className="mt-1 font-medium text-slate-600">
+                {profile.headline || "Add a professional headline"}
+              </p>
+              <div className="mt-2 flex flex-wrap gap-2 text-xs font-semibold text-slate-500">
+                <span className="inline-flex items-center gap-1">
+                  <GraduationCap size={14} />
+                  {profile.university?.name || "University unavailable"}
+                </span>
+                <span className="inline-flex items-center gap-1">
+                  <ShieldCheck size={14} />
+                  {profile.universityVerification?.status === "VERIFIED"
+                    ? "Verified university email"
+                    : "UIU domain member"}
+                </span>
+                <span className="inline-flex items-center gap-1">
+                  <VisibilityIcon size={14} />
+                  {profile.visibility.toLowerCase()}
+                </span>
               </div>
             </div>
-            {profile.externalLinks?.length > 0 && (
-              <div className="mt-4 flex flex-wrap gap-3">
-                {profile.externalLinks.map((link) => (
-                  <a
-                    key={`${link.type}-${link.url}`}
-                    href={link.url}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="text-sm font-bold text-brand-600 hover:underline"
-                  >
-                    {link.label || link.type}
-                  </a>
-                ))}
+            <div className="w-full rounded-2xl border border-slate-200 bg-slate-50 p-4 sm:w-56">
+              <div className="flex items-center justify-between text-sm">
+                <span className="font-semibold">Profile completion</span>
+                <strong className="text-brand-700">
+                  {profile.completionScore}%
+                </strong>
               </div>
-            )}
+              <div className="mt-2 h-2 overflow-hidden rounded-full bg-slate-200">
+                <div
+                  className="h-full rounded-full bg-brand-600 transition-all"
+                  style={{ width: `${profile.completionScore}%` }}
+                />
+              </div>
+              <p className="mt-2 flex items-center gap-1 text-xs text-slate-500">
+                {profile.isCompleteForApplications ? (
+                  <>
+                    <CheckCircle2 size={13} className="text-emerald-600" />
+                    Ready for applications
+                  </>
+                ) : (
+                  <>
+                    <LoaderCircle size={13} />
+                    Keep building your profile
+                  </>
+                )}
+              </p>
+            </div>
           </div>
+          {profile.externalLinks?.length > 0 && (
+            <div className="mt-4 flex flex-wrap gap-3">
+              {profile.externalLinks.map((link) => (
+                <a
+                  key={`${link.type}-${link.url}`}
+                  href={link.url}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="text-sm font-bold text-brand-600 hover:underline"
+                >
+                  {link.label || link.type}
+                </a>
+              ))}
+            </div>
+          )}
         </section>
         <div className="mt-5 grid gap-5 lg:grid-cols-[minmax(0,1.45fr)_minmax(280px,.7fr)]">
           <div className="space-y-5">

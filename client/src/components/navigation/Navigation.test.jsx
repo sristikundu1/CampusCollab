@@ -27,9 +27,10 @@ function renderHeader(auth) {
 describe("authentication-aware site navigation", () => {
   it("shows one Get Started action and no login button when signed out", () => {
     renderHeader({ loading: false, isAuthenticated: false, user: null });
-    expect(
-      screen.getByRole("link", { name: "Get Started" }),
-    ).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Get Started" })).toHaveAttribute(
+      "href",
+      "/login",
+    );
     expect(
       screen.queryByRole("link", { name: /log in|sign in/i }),
     ).not.toBeInTheDocument();
@@ -50,6 +51,7 @@ describe("authentication-aware site navigation", () => {
     expect(
       screen.queryByRole("link", { name: "Get Started" }),
     ).not.toBeInTheDocument();
+    expect(screen.getByText("J")).toBeInTheDocument();
     await user.click(
       screen.getByRole("button", { name: /open account menu/i }),
     );

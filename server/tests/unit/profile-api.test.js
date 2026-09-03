@@ -163,6 +163,21 @@ test("profile create and update use authenticated owner and reject unknown field
     });
     assert.equal(update.status, 200);
     assert.deepEqual(calls.at(-1).slice(0, 2), ["update", USER_A]);
+    const avatar = await fetch(`${base}/api/v1/profiles/me`, {
+      method: "PATCH",
+      headers: authHeaders("user-a-token", true),
+      body: JSON.stringify({
+        avatarUrl: "data:image/png;base64,aGVsbG8=",
+      }),
+    });
+    assert.equal(avatar.status, 200);
+    assert.equal(calls.at(-1)[2].avatarUrl.startsWith("data:image/png"), true);
+    const invalidAvatar = await fetch(`${base}/api/v1/profiles/me`, {
+      method: "PATCH",
+      headers: authHeaders("user-a-token", true),
+      body: JSON.stringify({ avatarUrl: "https://unsafe.example/avatar.png" }),
+    });
+    assert.equal(invalidAvatar.status, 422);
     const massAssignment = await fetch(`${base}/api/v1/profiles/me`, {
       method: "PATCH",
       headers: authHeaders("user-a-token", true),

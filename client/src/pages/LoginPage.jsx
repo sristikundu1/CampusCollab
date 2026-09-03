@@ -32,11 +32,16 @@ export function LoginPage() {
   const submit = async (values) => {
     setSubmitting(true);
     try {
-      await login(values);
+      const user = await login(values);
       notify("Welcome back to CampusCollab.");
-      navigate(location.state?.from?.pathname || "/dashboard", {
-        replace: true,
-      });
+      navigate(
+        user?.profile?.needsOnboarding
+          ? "/dashboard/onboarding"
+          : location.state?.from?.pathname || "/dashboard",
+        {
+          replace: true,
+        },
+      );
     } catch (error) {
       const parsed = apiError(error);
       setError("root", { message: parsed.message });
@@ -100,7 +105,7 @@ export function LoginPage() {
           </p>
         )}
         <button className="btn-primary w-full" disabled={submitting}>
-          {submitting ? <Spinner label="Signing in" /> : "Sign in"}
+          {submitting ? <Spinner label="Logging in…" /> : "Sign in"}
         </button>
         <p className="text-center text-sm text-slate-600">
           New to CampusCollab?{" "}

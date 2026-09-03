@@ -48,7 +48,10 @@ export function RegisterPage() {
       } else {
         navigate("/login", {
           replace: true,
-          state: { registrationMessage: data.data.message },
+          state: {
+            registrationMessage: data.data.message,
+            registeredNow: true,
+          },
         });
       }
     } catch (error) {

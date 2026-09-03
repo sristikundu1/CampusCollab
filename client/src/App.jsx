@@ -76,6 +76,11 @@ const ProfilePage = lazy(() =>
     default: module.ProfilePage,
   })),
 );
+const ProfileOnboardingPage = lazy(() =>
+  import("./pages/ProfileOnboardingPage.jsx").then((module) => ({
+    default: module.ProfileOnboardingPage,
+  })),
+);
 const PublicProfilePage = lazy(() =>
   import("./pages/PublicProfilePage.jsx").then((module) => ({
     default: module.PublicProfilePage,
@@ -167,6 +172,10 @@ export function App() {
         <Route element={<ProtectedRoute />}>
           <Route path="/dashboard" element={<DashboardPage />} />
           <Route path="/dashboard/profile" element={<ProfilePage />} />
+          <Route
+            path="/dashboard/onboarding"
+            element={<ProfileOnboardingPage />}
+          />
           <Route path="/dashboard/gigs" element={<MyGigsPage />} />
           <Route
             path="/dashboard/gig"

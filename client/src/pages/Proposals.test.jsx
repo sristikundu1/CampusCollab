@@ -196,6 +196,24 @@ describe("Proposal workflow", () => {
       screen.queryByRole("button", { name: "Apply to this Gig" }),
     ).not.toBeInTheDocument();
   });
+  it("keeps gig details usable when the proposal-status request fails", async () => {
+    mocks.mine.mockRejectedValueOnce(new Error("Could not check applications"));
+    renderAt(
+      <Routes>
+        <Route path="/gigs/:gigId" element={<GigDetailsPage />} />
+      </Routes>,
+      `/gigs/${GIG}`,
+    );
+    expect(
+      await screen.findByRole("heading", { name: gig.title }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText("Could not check applications"),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Apply to this Gig" }),
+    ).toBeEnabled();
+  });
   it("lists applicant proposals with lifecycle status and detail links", async () => {
     mocks.mine.mockImplementation(() => response({ proposals: [proposal] }));
     renderAt(<MyProposalsPage />, "/proposals");

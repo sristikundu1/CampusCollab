@@ -22,25 +22,43 @@ api.interceptors.request.use((config) => {
 
 export function apiError(error) {
   const response = error?.response;
+  if (!response) {
+    return {
+      status: undefined,
+      code: error?.code,
+      message:
+        error?.code === "ECONNABORTED" || error?.code === "ETIMEDOUT"
+          ? "The request took too long. Please try again."
+          : "We couldn't connect to the server. Please check your connection and try again.",
+      details: [],
+    };
+  }
   const fallback =
     response?.status === 429
       ? "Too many attempts. Please wait and try again."
-      : response?.status >= 500
-        ? "CampusCollab is temporarily unavailable."
-        : "Something went wrong. Please try again.";
+      : response?.status === 401
+        ? "Your session has expired. Please sign in again."
+        : response?.status === 404
+          ? "The requested resource could not be found."
+          : response?.status >= 500
+            ? "Something went wrong on our side. Please try again in a moment."
+            : "Something went wrong. Please try again.";
   return {
     status: response?.status,
     code: response?.data?.error?.code,
-    message: response?.data?.error?.message || fallback,
+    message:
+      response?.status >= 500
+        ? fallback
+        : response?.data?.error?.message || fallback,
     details: response?.data?.error?.details || [],
   };
 }
 
 export const authApi = {
   register: (body) => api.post("/auth/register", body),
-  login: (body) => api.post("/auth/login", body),
+  login: (body) => api.post("/auth/login", body, { timeout: 12_000 }),
   logout: () => api.post("/auth/logout"),
-  me: () => api.get("/auth/me"),
+  me: () => api.get("/auth/me", { timeout: 8_000 }),
   verify: (token) => api.post("/auth/verify-email", { token }),
   resend: (email) => api.post("/auth/verification/resend", { email }),
   forgot: (email) => api.post("/auth/password/forgot", { email }),

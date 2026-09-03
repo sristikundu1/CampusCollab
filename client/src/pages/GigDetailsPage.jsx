@@ -17,7 +17,7 @@ import {
   Trash2,
   Users,
 } from "lucide-react";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { formatBudget } from "../components/gigs/GigCard.jsx";
 import { MarketplaceLayout } from "../components/gigs/MarketplaceLayout.jsx";
@@ -27,6 +27,7 @@ import { useAuth } from "../context/auth-context.js";
 import { useToast } from "../context/toast-context.js";
 import { confirmAction } from "../lib/confirm-action.js";
 import { apiError, gigApi, proposalApi } from "../services/api.js";
+import { Avatar } from "../components/Avatar.jsx";
 
 const copy = {
   publish: {
@@ -66,7 +67,7 @@ const copy = {
 
 export function GigDetailsPage() {
   const { gigId } = useParams();
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, expireSession } = useAuth();
   const { notify } = useToast();
   const navigate = useNavigate();
   const [gig, setGig] = useState(null);
@@ -76,15 +77,22 @@ export function GigDetailsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
+  const applicationFormRef = useRef(null);
   const load = useCallback(async () => {
     setLoading(true);
     setError("");
     try {
-      const nextGig = (await gigApi.get(gigId)).data.data.gig;
+      const [gigResult, proposalResult] = await Promise.allSettled([
+        gigApi.get(gigId),
+        proposalApi.mine({ gigId, limit: 1 }),
+      ]);
+      if (gigResult.status === "rejected") throw gigResult.reason;
+      const nextGig = gigResult.value.data.data.gig;
       setGig(nextGig);
       if (!nextGig.isOwner) {
-        const result = await proposalApi.mine({ gigId, limit: 1 });
-        setApplication(result.data.data.proposals[0] ?? null);
+        if (proposalResult.status === "fulfilled")
+          setApplication(proposalResult.value.data.data.proposals[0] ?? null);
+        else setApplyError(apiError(proposalResult.reason).message);
       }
     } catch (reason) {
       const failure = apiError(reason);
@@ -100,6 +108,17 @@ export function GigDetailsPage() {
   useEffect(() => {
     void load();
   }, [load]);
+  useEffect(() => {
+    if (!showForm) return;
+    const frame = requestAnimationFrame(() => {
+      const form = applicationFormRef.current;
+      if (typeof form?.scrollIntoView === "function")
+        form.scrollIntoView({ behavior: "smooth", block: "start" });
+      if (typeof form?.focus === "function")
+        form.focus({ preventScroll: true });
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [showForm]);
   const bookmark = async () => {
     if (!isAuthenticated) {
       navigate("/login");
@@ -165,6 +184,14 @@ export function GigDetailsPage() {
       notify("Proposal submitted successfully.");
     } catch (reason) {
       const failure = apiError(reason);
+      if (failure.status === 401) {
+        expireSession?.();
+        navigate("/login", {
+          replace: true,
+          state: { from: { pathname: `/gigs/${gigId}` } },
+        });
+        return;
+      }
       setApplyError(
         failure.code === "PROFILE_INCOMPLETE"
           ? "Complete at least 70% of your profile, including a bio and skill, before applying."
@@ -204,12 +231,6 @@ export function GigDetailsPage() {
     ["DRAFT", "ARCHIVED"].includes(gig.status) &&
     gig.proposalCount === 0 &&
     gig.acceptedCount === 0;
-  const initials = gig.owner.displayName
-    .split(/\s+/)
-    .map((part) => part[0])
-    .slice(0, 2)
-    .join("")
-    .toUpperCase();
   return (
     <MarketplaceLayout>
       <div className="mx-auto max-w-6xl">
@@ -313,9 +334,12 @@ export function GigDetailsPage() {
                 {gig.title}
               </h1>
               <div className="mt-6 flex items-center gap-3">
-                <span className="grid size-11 place-items-center rounded-xl bg-white text-sm font-black text-brand-900">
-                  {initials}
-                </span>
+                <Avatar
+                  src={gig.owner.avatarUrl}
+                  initial={gig.owner.avatarInitial}
+                  name={gig.owner.displayName}
+                  className="size-11 border-2 border-white/80 bg-white text-sm text-brand-900"
+                />
                 <div>
                   <Link
                     to={`/students/${gig.owner.id}`}
@@ -415,14 +439,27 @@ export function GigDetailsPage() {
                 </div>
               </div>
             </dl>
-            {gig.isOwner ? (
-              <Link
-                className="btn-primary mt-6 w-full"
-                to={`/dashboard/gigs/${gig.id}/proposals`}
+            {applyError && !showForm && (
+              <p
+                className="mt-5 rounded-xl bg-rose-50 p-3 text-sm font-semibold text-rose-700"
+                role="alert"
               >
-                <FileText size={17} />
-                Review proposals ({gig.proposalCount})
-              </Link>
+                {applyError}
+              </p>
+            )}
+            {gig.isOwner ? (
+              <div className="mt-6">
+                <Link
+                  className="btn-primary w-full"
+                  to={`/dashboard/gigs/${gig.id}/proposals`}
+                >
+                  <FileText size={17} />
+                  Review proposals ({gig.proposalCount})
+                </Link>
+                <p className="mt-3 text-center text-xs font-semibold text-slate-500">
+                  You own this gig, so you cannot apply to it.
+                </p>
+              </div>
             ) : application ? (
               <div className="mt-6 rounded-2xl border border-slate-200 bg-slate-50 p-4">
                 <ProposalStatusBadge status={application.status} />
@@ -442,7 +479,11 @@ export function GigDetailsPage() {
               gig.isActive !== false ? (
               <button
                 className="btn-primary mt-6 w-full"
-                onClick={() => setShowForm(true)}
+                disabled={busy}
+                onClick={() => {
+                  setApplyError("");
+                  setShowForm(true);
+                }}
               >
                 <Send size={17} />
                 Apply to this Gig
@@ -470,7 +511,11 @@ export function GigDetailsPage() {
           </aside>
         </article>
         {showForm && !application && (
-          <section className="surface mt-7 p-6 sm:p-8">
+          <section
+            ref={applicationFormRef}
+            tabIndex={-1}
+            className="surface mt-7 scroll-mt-24 p-6 outline-none sm:p-8"
+          >
             <div className="mb-6 flex flex-wrap items-start justify-between gap-3">
               <div>
                 <p className="eyebrow">Your application</p>
@@ -487,10 +532,19 @@ export function GigDetailsPage() {
                 Cancel
               </button>
             </div>
+            {applyError && (
+              <p
+                className="mb-5 rounded-xl bg-rose-50 p-3 text-sm font-semibold text-rose-700"
+                role="alert"
+              >
+                {applyError}
+              </p>
+            )}
             <ProposalForm
               gigBudget={gig.budget}
               onSubmit={submitProposal}
               busy={busy}
+              busyLabel="Applying…"
             />
           </section>
         )}

@@ -13,6 +13,7 @@ import { Bookmark } from "./bookmark.model.js";
 import { Gig } from "./gig.model.js";
 import { targetGigState } from "./gig-lifecycle.js";
 import { Proposal } from "../proposals/proposal.model.js";
+import { User } from "../auth/user.model.js";
 
 const editFields = [
   "title",
@@ -38,6 +39,7 @@ export function createGigService({
   AffiliationModel = UniversityAffiliation,
   UniversityModel = University,
   ProposalModel = Proposal,
+  UserModel = User,
   transaction = withTransaction,
 } = {}) {
   const cursorCodec = createCursorCodec(config.csrfSecret);
@@ -92,7 +94,12 @@ export function createGigService({
       ...visibility,
     };
   }
-  async function enrich(gigs, viewerId, ownerView = false) {
+  async function enrich(
+    gigs,
+    viewerId,
+    ownerView = false,
+    includeOwnerProfile = false,
+  ) {
     if (!gigs.length) return [];
     const skillIds = [
       ...new Set(
@@ -108,21 +115,37 @@ export function createGigService({
           .filter(Boolean),
       ),
     ];
-    const [skills, universities, bookmarks] = await Promise.all([
-      SkillModel.find({ _id: { $in: skillIds } }).lean(),
-      UniversityModel.find({ _id: { $in: universityIds } }).lean(),
-      viewerId
-        ? BookmarkModel.find({
-            userId: viewerId,
-            gigId: { $in: gigs.map((gig) => gig._id) },
-          }).lean()
-        : [],
-    ]);
+    const ownerIds = [...new Set(gigs.map((gig) => String(gig.ownerId)))];
+    const [skills, universities, bookmarks, ownerProfiles, owners] =
+      await Promise.all([
+        SkillModel.find({ _id: { $in: skillIds } }).lean(),
+        UniversityModel.find({ _id: { $in: universityIds } }).lean(),
+        viewerId
+          ? BookmarkModel.find({
+              userId: viewerId,
+              gigId: { $in: gigs.map((gig) => gig._id) },
+            }).lean()
+          : [],
+        includeOwnerProfile
+          ? ProfileModel.find({ userId: { $in: ownerIds } })
+              .select("userId avatarUrl")
+              .lean()
+          : [],
+        includeOwnerProfile
+          ? UserModel.find({ _id: { $in: ownerIds } })
+              .select("email")
+              .lean()
+          : [],
+      ]);
     const skillMap = new Map(skills.map((skill) => [String(skill._id), skill]));
     const universityMap = new Map(
       universities.map((university) => [String(university._id), university]),
     );
     const bookmarked = new Set(bookmarks.map((entry) => String(entry.gigId)));
+    const profileMap = new Map(
+      ownerProfiles.map((profile) => [String(profile.userId), profile]),
+    );
+    const ownerMap = new Map(owners.map((owner) => [String(owner._id), owner]));
     return gigs.map((gig) => ({
       id: String(gig._id),
       title: gig.title,
@@ -155,6 +178,15 @@ export function createGigService({
       owner: {
         id: String(gig.ownerId),
         displayName: gig.ownerSnapshot?.displayName ?? "CampusCollab member",
+        avatarUrl: profileMap.get(String(gig.ownerId))?.avatarUrl ?? null,
+        avatarInitial:
+          ownerMap
+            .get(String(gig.ownerId))
+            ?.email?.trim()
+            ?.charAt(0)
+            ?.toUpperCase() ||
+          gig.ownerSnapshot?.displayName?.trim()?.charAt(0)?.toUpperCase() ||
+          "C",
       },
       isOwner: Boolean(viewerId && String(viewerId) === String(gig.ownerId)),
       isBookmarked: bookmarked.has(String(gig._id)),
@@ -219,7 +251,7 @@ export function createGigService({
       ...input,
       deadlineAt: dateValue(input.deadlineAt),
     });
-    return (await enrich([gig.toObject()], userId, true))[0];
+    return (await enrich([gig.toObject()], userId, true, true))[0];
   }
   async function list(input, viewerId) {
     const viewerAffiliation = viewerId ? await affiliation(viewerId) : null;
@@ -291,7 +323,7 @@ export function createGigService({
               String(gig.universityId)));
       if (!visible) throw new NotFoundError();
     }
-    return (await enrich([gig], viewerId, Boolean(isOwner)))[0];
+    return (await enrich([gig], viewerId, Boolean(isOwner), true))[0];
   }
   async function update(userId, gigId, input) {
     const gig = await GigModel.findOne({ _id: gigId, ownerId: userId });
@@ -326,7 +358,7 @@ export function createGigService({
     if (gig.status === "PUBLISHED") gig.materialRevision += 1;
     gig.version += 1;
     await gig.save();
-    return (await enrich([gig.toObject()], userId, true))[0];
+    return (await enrich([gig.toObject()], userId, true, true))[0];
   }
   async function transition(userId, gigId, action, input = {}) {
     await transaction(async (session) => {

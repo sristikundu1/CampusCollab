@@ -82,7 +82,9 @@ export function createApp({
       handler: (_request, _response, next) => next(new RateLimitError()),
     }),
   );
-  app.use(express.json({ limit: "100kb", strict: true }));
+  // Profile photos are client-compressed before upload and remain tightly
+  // validated. Keep the global limit small enough to reject general abuse.
+  app.use(express.json({ limit: "128kb", strict: true }));
   app.use(express.urlencoded({ extended: false, limit: "20kb" }));
   app.use(rejectDuplicateQueryParameters);
   app.use(rejectUnsafeDocumentKeys);

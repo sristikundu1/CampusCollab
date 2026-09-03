@@ -1,8 +1,11 @@
 import { zodResolver } from "@hookform/resolvers/zod";
+import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { FormField } from "../FormField.jsx";
 import { Spinner } from "../Spinner.jsx";
+import { Avatar } from "../Avatar.jsx";
+import { prepareAvatarImage } from "../../lib/avatar-image.js";
 
 const schema = z.object({
   displayName: z.string().trim().min(2).max(80),
@@ -38,7 +41,10 @@ const schema = z.object({
   ]),
 });
 
-export function ProfileEditor({ profile, saving, onCancel, onSave }) {
+export function ProfileEditor({ profile, email, saving, onCancel, onSave }) {
+  const [avatarUrl, setAvatarUrl] = useState(profile.avatarUrl ?? null);
+  const [avatarError, setAvatarError] = useState("");
+  const [processingImage, setProcessingImage] = useState(false);
   const links = Object.fromEntries(
     (profile.externalLinks ?? []).map((link) => [
       link.type.toLowerCase(),
@@ -67,6 +73,7 @@ export function ProfileEditor({ profile, saving, onCancel, onSave }) {
   const submit = (values) =>
     onSave({
       displayName: values.displayName,
+      avatarUrl,
       headline: values.headline,
       department: values.department,
       graduationYear: values.graduationYear || null,
@@ -81,6 +88,20 @@ export function ProfileEditor({ profile, saving, onCancel, onSave }) {
         .filter(([, url]) => url)
         .map(([type, url]) => ({ type, url })),
     });
+  const chooseAvatar = async (event) => {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+    if (!file) return;
+    setAvatarError("");
+    setProcessingImage(true);
+    try {
+      setAvatarUrl(await prepareAvatarImage(file));
+    } catch (error) {
+      setAvatarError(error.message);
+    } finally {
+      setProcessingImage(false);
+    }
+  };
   return (
     <form
       onSubmit={handleSubmit(submit)}
@@ -90,6 +111,50 @@ export function ProfileEditor({ profile, saving, onCancel, onSave }) {
       <div>
         <p className="eyebrow">Edit profile</p>
         <h2 className="mt-1 text-xl font-bold">Your professional identity</h2>
+      </div>
+      <div className="flex flex-col gap-4 rounded-2xl border border-slate-200 bg-slate-50 p-4 sm:flex-row sm:items-center">
+        <Avatar
+          src={avatarUrl}
+          email={email}
+          name={profile.displayName}
+          className="size-20 border-4 border-white text-2xl shadow-sm"
+        />
+        <div className="min-w-0 flex-1">
+          <p className="text-sm font-bold text-slate-900">Profile photo</p>
+          <p className="mt-1 text-xs leading-5 text-slate-500">
+            JPEG, PNG, or WebP. The image is cropped and compressed securely.
+          </p>
+          <div className="mt-3 flex flex-wrap gap-2">
+            <label className="btn-secondary cursor-pointer !px-4 !py-2">
+              {processingImage ? "Preparing…" : "Choose photo"}
+              <input
+                className="sr-only"
+                type="file"
+                accept="image/jpeg,image/png,image/webp"
+                disabled={processingImage || saving}
+                onChange={chooseAvatar}
+              />
+            </label>
+            {avatarUrl && (
+              <button
+                type="button"
+                className="btn-secondary !px-4 !py-2 text-rose-700"
+                onClick={() => setAvatarUrl(null)}
+                disabled={processingImage || saving}
+              >
+                Remove photo
+              </button>
+            )}
+          </div>
+          {avatarError && (
+            <p
+              className="mt-2 text-xs font-semibold text-rose-600"
+              role="alert"
+            >
+              {avatarError}
+            </p>
+          )}
+        </div>
       </div>
       <div className="grid gap-4 sm:grid-cols-2">
         <FormField
@@ -174,7 +239,7 @@ export function ProfileEditor({ profile, saving, onCancel, onSave }) {
         <button type="button" className="btn-secondary" onClick={onCancel}>
           Cancel
         </button>
-        <button className="btn-primary" disabled={saving}>
+        <button className="btn-primary" disabled={saving || processingImage}>
           {saving ? <Spinner label="Saving" /> : "Save profile"}
         </button>
       </div>

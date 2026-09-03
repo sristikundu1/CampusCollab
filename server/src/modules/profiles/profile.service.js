@@ -5,6 +5,7 @@ import {
 } from "../../errors/application-error.js";
 import { UniversityAffiliation } from "../university/university-affiliation.model.js";
 import { University } from "../university/university.model.js";
+import { User } from "../auth/user.model.js";
 import { Skill } from "../skills/skill.model.js";
 import { PortfolioItem } from "./portfolio-item.model.js";
 import { Profile } from "./profile.model.js";
@@ -20,6 +21,7 @@ export function createProfileService({
   SkillModel = Skill,
   AffiliationModel = UniversityAffiliation,
   UniversityModel = University,
+  UserModel = User,
 } = {}) {
   async function requireProfile(userId) {
     const profile = await ProfileModel.findOne({ userId });
@@ -61,24 +63,32 @@ export function createProfileService({
   }
 
   async function contextFor(profile) {
-    const [skills, affiliation, publishedPortfolioCount] = await Promise.all([
-      SkillModel.find({
-        _id: { $in: profile.skillEntries.map((entry) => entry.skillId) },
-        status: "ACTIVE",
-      }).lean(),
-      AffiliationModel.findOne({
-        userId: profile.userId,
-        isActive: true,
-      }).lean(),
-      PortfolioModel.countDocuments({
-        userId: profile.userId,
-        status: "PUBLISHED",
-      }),
-    ]);
+    const [skills, affiliation, publishedPortfolioCount, user] =
+      await Promise.all([
+        SkillModel.find({
+          _id: { $in: profile.skillEntries.map((entry) => entry.skillId) },
+          status: "ACTIVE",
+        }).lean(),
+        AffiliationModel.findOne({
+          userId: profile.userId,
+          isActive: true,
+        }).lean(),
+        PortfolioModel.countDocuments({
+          userId: profile.userId,
+          status: "PUBLISHED",
+        }),
+        UserModel.findById(profile.userId).select("email").lean(),
+      ]);
     const university = affiliation
       ? await UniversityModel.findById(affiliation.universityId).lean()
       : null;
-    return { skills, affiliation, university, publishedPortfolioCount };
+    return {
+      skills,
+      affiliation,
+      university,
+      publishedPortfolioCount,
+      user,
+    };
   }
 
   function profileProjection(profile, context, isOwner) {
@@ -88,6 +98,11 @@ export function createProfileService({
     const result = {
       userId: String(profile.userId),
       displayName: profile.displayName,
+      avatarUrl: profile.avatarUrl ?? null,
+      avatarInitial:
+        context.user?.email?.trim()?.charAt(0)?.toUpperCase() ||
+        profile.displayName?.trim()?.charAt(0)?.toUpperCase() ||
+        "C",
       headline: profile.headline ?? "",
       department: profile.department ?? "",
       graduationYear: profile.graduationYear ?? null,
@@ -109,6 +124,7 @@ export function createProfileService({
       visibility: profile.visibility,
       completionScore: profile.completionScore,
       isCompleteForApplications: profile.isCompleteForApplications,
+      needsOnboarding: (profile.onboardingStatus ?? "COMPLETE") === "PENDING",
       publishedPortfolioCount: context.publishedPortfolioCount,
       university: context.university
         ? {
@@ -123,6 +139,7 @@ export function createProfileService({
       updatedAt: profile.updatedAt,
     };
     if (isOwner) {
+      result.email = context.user?.email ?? "";
       result.educationEntries = profile.educationEntries ?? [];
       result.version = profile.version;
     }
@@ -183,12 +200,14 @@ export function createProfileService({
     const profile = await requireProfile(userId);
     for (const field of [
       "displayName",
+      "avatarUrl",
       "headline",
       "department",
       "bio",
       "visibility",
       "educationEntries",
       "externalLinks",
+      "onboardingStatus",
     ]) {
       if (field in input) profile[field] = clean(input[field]);
     }

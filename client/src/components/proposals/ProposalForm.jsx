@@ -75,6 +75,7 @@ export function ProposalForm({
   initial,
   onSubmit,
   submitLabel = "Submit proposal",
+  busyLabel = "Saving…",
   busy = false,
 }) {
   const current = initial?.proposedBudget;
@@ -209,7 +210,7 @@ export function ProposalForm({
         ) : (
           <Send size={17} />
         )}{" "}
-        {busy ? "Saving…" : submitLabel}
+        {busy ? busyLabel : submitLabel}
       </button>
     </form>
   );

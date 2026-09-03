@@ -31,8 +31,11 @@ function publicUser(user, profile, affiliation) {
     profile: profile
       ? {
           displayName: profile.displayName,
+          avatarUrl: profile.avatarUrl ?? null,
           completionScore: profile.completionScore,
           isCompleteForApplications: profile.isCompleteForApplications,
+          needsOnboarding:
+            (profile.onboardingStatus ?? "COMPLETE") === "PENDING",
         }
       : null,
     universityVerification: affiliation
@@ -115,7 +118,13 @@ export function createAuthService({ config, emailService }) {
           { session },
         );
         const [profile] = await Profile.create(
-          [{ userId: user._id, displayName: input.name }],
+          [
+            {
+              userId: user._id,
+              displayName: input.name,
+              onboardingStatus: "PENDING",
+            },
+          ],
           { session },
         );
         const [affiliation] = await UniversityAffiliation.create(
@@ -237,10 +246,13 @@ export function createAuthService({ config, emailService }) {
           "INVALID_CREDENTIALS",
           "Email or password is incorrect.",
         );
-      const affiliation = await UniversityAffiliation.findOne({
-        userId: user._id,
-        isActive: true,
-      });
+      const [affiliation, profile] = await Promise.all([
+        UniversityAffiliation.findOne({
+          userId: user._id,
+          isActive: true,
+        }),
+        Profile.findOne({ userId: user._id }),
+      ]);
       if (
         config.requireEmailVerification &&
         (user.status === "PENDING_VERIFICATION" ||
@@ -268,17 +280,23 @@ export function createAuthService({ config, emailService }) {
       const expiresAt = new Date(
         Date.now() + (remember ? config.sessionTtlDays * DAY : DAY),
       );
-      const session = await Session.create({
-        userId: user._id,
-        tokenHash: hashOpaqueToken(rawToken, secret()),
-        familyId: randomUUID(),
-        authMethod: "PASSWORD",
-        issuedAt: new Date(),
-        expiresAt,
-      });
       user.lastLoginAt = new Date();
-      await user.save();
-      return { rawToken, expiresAt, user: await this.currentUser(user._id) };
+      await Promise.all([
+        Session.create({
+          userId: user._id,
+          tokenHash: hashOpaqueToken(rawToken, secret()),
+          familyId: randomUUID(),
+          authMethod: "PASSWORD",
+          issuedAt: new Date(),
+          expiresAt,
+        }),
+        user.save(),
+      ]);
+      return {
+        rawToken,
+        expiresAt,
+        user: publicUser(user, profile, affiliation),
+      };
     },
     async authenticate(rawToken) {
       if (!rawToken) throw new AuthenticationError();

@@ -81,7 +81,7 @@ test("oversized JSON is rejected without internal details", async () => {
     const response = await fetch(`${base}/api/v1`, {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ value: "x".repeat(110_000) }),
+      body: JSON.stringify({ value: "x".repeat(140_000) }),
     });
     assert.equal(response.status, 413);
     assert.equal((await response.json()).error.code, "PAYLOAD_TOO_LARGE");

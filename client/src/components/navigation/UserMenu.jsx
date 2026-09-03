@@ -3,20 +3,7 @@ import { useEffect, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../../context/auth-context.js";
 import { useToast } from "../../context/toast-context.js";
-
-function userInitials(user) {
-  const source =
-    user?.profile?.displayName || user?.email?.split("@")[0] || "CC";
-  return (
-    source
-      .split(/[.\s_-]+/)
-      .filter(Boolean)
-      .map((part) => part[0])
-      .slice(0, 2)
-      .join("")
-      .toUpperCase() || "CC"
-  );
-}
+import { Avatar } from "../Avatar.jsx";
 
 export function UserMenu() {
   const [open, setOpen] = useState(false);
@@ -63,11 +50,12 @@ export function UserMenu() {
         aria-expanded={open}
         onClick={() => setOpen((current) => !current)}
       >
-        {avatarUrl ? (
-          <img className="size-full object-cover" src={avatarUrl} alt="" />
-        ) : (
-          userInitials(user)
-        )}
+        <Avatar
+          src={avatarUrl}
+          email={user?.email}
+          name={user?.profile?.displayName}
+          className="size-full text-xs"
+        />
       </button>
       {open && (
         <div

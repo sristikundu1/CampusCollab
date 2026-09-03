@@ -1,9 +1,16 @@
-import { ArrowLeft, Briefcase, GraduationCap, ShieldCheck } from "lucide-react";
+import {
+  ArrowLeft,
+  Briefcase,
+  Clock3,
+  GraduationCap,
+  ShieldCheck,
+} from "lucide-react";
 import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { SiteFooter } from "../components/navigation/SiteFooter.jsx";
 import { SiteHeader } from "../components/navigation/SiteHeader.jsx";
 import { apiError, profileApi } from "../services/api.js";
+import { Avatar } from "../components/Avatar.jsx";
 
 function PublicProfileShell({ children }) {
   return (
@@ -61,12 +68,6 @@ export function PublicProfilePage() {
         </div>
       </PublicProfileShell>
     );
-  const initials = profile.displayName
-    .split(/\s+/)
-    .map((p) => p[0])
-    .slice(0, 2)
-    .join("")
-    .toUpperCase();
   return (
     <PublicProfileShell>
       <div className="mx-auto w-full max-w-5xl px-4 py-8 sm:py-10">
@@ -77,25 +78,46 @@ export function PublicProfilePage() {
           <ArrowLeft size={16} />
           CampusCollab
         </Link>
-        <section className="surface mt-6 overflow-hidden">
-          <div className="h-36 bg-[radial-gradient(circle_at_80%_20%,#60a5fa_0,transparent_26%),linear-gradient(120deg,#172554,#2856cc)] sm:h-40" />
-          <div className="px-6 pb-8 sm:px-9">
-            <div className="-mt-14 grid size-28 place-items-center rounded-full border-4 border-white bg-brand-100 text-3xl font-black text-brand-700 shadow-lg">
-              {initials}
-            </div>
-            <h1 className="mt-4 text-3xl font-bold">{profile.displayName}</h1>
-            <p className="mt-1 text-lg text-slate-600">{profile.headline}</p>
-            <div className="mt-3 flex flex-wrap gap-4 text-sm font-semibold text-slate-500">
-              <span className="inline-flex gap-2">
-                <GraduationCap size={18} />
-                {profile.university?.name}
-              </span>
-              <span className="inline-flex gap-2">
-                <ShieldCheck size={18} />
-                {profile.universityVerification?.status === "VERIFIED"
-                  ? "Verified student"
-                  : "University member"}
-              </span>
+        <section className="surface mt-6 p-6 sm:p-8">
+          <div className="flex flex-col gap-5 sm:flex-row sm:items-center">
+            <Avatar
+              src={profile.avatarUrl}
+              initial={profile.avatarInitial}
+              name={profile.displayName}
+              className="size-24 border-4 border-white text-3xl shadow-md sm:size-28"
+            />
+            <div className="min-w-0">
+              <h1 className="text-3xl font-bold">{profile.displayName}</h1>
+              <p className="mt-1 text-lg text-slate-600">{profile.headline}</p>
+              <div className="mt-3 flex flex-wrap gap-4 text-sm font-semibold text-slate-500">
+                <span className="inline-flex gap-2">
+                  <GraduationCap size={18} />
+                  {profile.university?.name}
+                </span>
+                <span className="inline-flex gap-2">
+                  <ShieldCheck size={18} />
+                  {profile.universityVerification?.status === "VERIFIED"
+                    ? "Verified student"
+                    : "University member"}
+                </span>
+                {profile.department && (
+                  <span className="inline-flex gap-2">
+                    <GraduationCap size={18} /> {profile.department}
+                  </span>
+                )}
+                {profile.experienceLevel && (
+                  <span className="inline-flex gap-2">
+                    <Briefcase size={18} />
+                    {profile.experienceLevel.toLowerCase()} experience
+                  </span>
+                )}
+                {profile.availability?.hoursPerWeek > 0 && (
+                  <span className="inline-flex gap-2">
+                    <Clock3 size={18} /> {profile.availability.hoursPerWeek}{" "}
+                    hrs/week
+                  </span>
+                )}
+              </div>
             </div>
           </div>
         </section>
