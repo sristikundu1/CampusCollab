@@ -8,7 +8,7 @@ During the current stabilization phase, `REQUIRE_EMAIL_VERIFICATION=false` permi
 
 `MONGODB_DB_NAME` explicitly selects the application database. Use `CampusCollab`; without an explicit database selection, MongoDB drivers commonly fall back to `test`.
 
-> **Current runtime:** MongoDB, session, and CSRF values are required. Redis is optional for a single local process and required when `NODE_ENV=production`. SMTP is optional while email verification remains disabled. Cloudinary is not used by the implemented application.
+> **Current runtime:** MongoDB, session, and CSRF values are required. Redis is not used by the current application. SMTP is optional while email verification remains disabled. Cloudinary is not used by the implemented application.
 
 ## 1. Configuration classes
 
@@ -100,7 +100,7 @@ Redis is not used by the current MVP. Request throttling uses the in-memory stor
 4. Start-up configuration validation must fail fast for missing, placeholder, malformed, or unsafe production values.
 5. Never prefix backend secrets with frontend exposure conventions such as `VITE_`.
 
-Do not create `.env` until you have the values. CampusCollab currently has no `.env` file by design.
+The Git repository intentionally contains no real `.env` file. Each developer creates it locally after obtaining environment-specific values.
 
 ## 4. Secret lifecycle and deployment
 
@@ -118,8 +118,8 @@ Do not create `.env` until you have the values. CampusCollab currently has no `.
 - [ ] MongoDB deployment, least-privilege user, network controls, TLS, backups, and `MONGODB_URI` configured
 - [ ] Independent `SESSION_SECRET` and `CSRF_SECRET` generated securely
 - [ ] Email provider credentials and verified `EMAIL_FROM` configured
-- [ ] Cloudinary account, credentials, delivery policy, and upload restrictions configured
-- [ ] Redis TLS URL configured for multi-instance production
+- [ ] Cloudinary configuration reviewed if file uploads are enabled in a future release
+- [ ] Shared rate-limit storage designed before scaling the backend across multiple instances
 - [ ] Production log level and proxy trust configured
 - [ ] Secrets stored in the deployment secret manager, not repository variables
 - [ ] Configuration validation and secret-redaction tests pass

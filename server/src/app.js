@@ -94,6 +94,18 @@ export function createApp({
       data: { status: "alive" },
       meta: { requestId: request.id },
     });
+  app.get("/", (request, response) =>
+    response.json({
+      data: {
+        name: "CampusCollab API",
+        status: "alive",
+        api: "/api/v1",
+        health: "/health",
+        readiness: "/ready",
+      },
+      meta: { requestId: request.id },
+    }),
+  );
   const ready = (request, response) => {
     const state = databaseReadiness();
     response.status(state.ready ? 200 : 503).json({

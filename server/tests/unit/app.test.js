@@ -47,6 +47,18 @@ test("health is live and readiness follows MongoDB state", async () => {
   });
 });
 
+test("root identifies the API and its status endpoints", async () => {
+  await withServer({ ready: true, status: "CONNECTED" }, async (base) => {
+    const response = await fetch(base);
+    const body = await response.json();
+    assert.equal(response.status, 200);
+    assert.equal(body.data.name, "CampusCollab API");
+    assert.equal(body.data.api, "/api/v1");
+    assert.equal(body.data.health, "/health");
+    assert.equal(body.data.readiness, "/ready");
+  });
+});
+
 test("404 uses the safe Phase 4 error envelope", async () => {
   await withServer({ ready: true, status: "CONNECTED" }, async (base) => {
     const response = await fetch(`${base}/missing`);
