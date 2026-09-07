@@ -407,6 +407,7 @@ Production URLs must use HTTPS. Because Vite embeds `VITE_API_URL` at build time
 - [Database architecture](docs/architecture/phase-3-database-architecture.md)
 - [API and backend architecture](docs/architecture/phase-4-api-and-backend-architecture.md)
 - [Backend foundation](docs/architecture/phase-5-backend-foundation.md)
+- [Server code walkthrough](docs/architecture/server-code-walkthrough.md)
 - [Environment configuration](docs/setup/environment-variables.md)
 - [OpenAPI specification](docs/openapi/phase-5-foundation.yaml)
 - [Manual acceptance tests](docs/testing/manual-user-acceptance-test-cases.md)
