@@ -1,7 +1,9 @@
 import axios from "axios";
 
 export const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || "http://localhost:5000/api/v1",
+  // Keep browser requests same-origin. Vite proxies /api locally and Vercel
+  // proxies it in production, so session cookies are never third-party.
+  baseURL: "/api/v1",
   withCredentials: true,
   headers: { Accept: "application/json" },
   timeout: 15_000,

@@ -207,7 +207,7 @@ REQUIRE_EMAIL_VERIFICATION=false
 
 ```env
 # client/.env
-VITE_API_URL=http://localhost:5000/api/v1
+VITE_API_PROXY_TARGET=http://localhost:5000
 ```
 
 For MongoDB Atlas, create a database user and allow the developer's current IP in Atlas Network Access. URL-encode reserved characters in the database password.
@@ -340,7 +340,7 @@ node --input-type=module -e "import 'dotenv/config'; console.log({mongodb:!!proc
 1. Confirm the backend terminal says `CampusCollab API listening`.
 2. Open <http://localhost:5000/health> and expect `status: alive`.
 3. Open <http://localhost:5000/ready> and expect `status: ready`.
-4. Confirm `client/.env` contains `VITE_API_URL=http://localhost:5000/api/v1`.
+4. Confirm `client/.env` contains `VITE_API_PROXY_TARGET=http://localhost:5000`.
 5. Confirm `server/.env` contains `CLIENT_URL=http://localhost:5173`.
 6. Restart Vite after changing `client/.env`.
 
@@ -378,13 +378,7 @@ Manual acceptance cases are available in [docs/testing/manual-user-acceptance-te
 
 ## Deployment
 
-The client and server deploy as separate Vercel projects.
-
-Frontend environment:
-
-```env
-VITE_API_URL=https://YOUR_API_DOMAIN/api/v1
-```
+The client and server deploy as separate Vercel projects. Browser requests use the same-origin `/api/v1` path, and `client/vercel.json` proxies `/api/*` to the backend. This is required so authentication cookies remain first-party in incognito mode and in browsers that block third-party cookies.
 
 Backend environment:
 
@@ -398,7 +392,7 @@ CSRF_SECRET=YOUR_PRODUCTION_CSRF_SECRET
 TRUST_PROXY=true
 ```
 
-Production URLs must use HTTPS. Because Vite embeds `VITE_API_URL` at build time, redeploy the frontend after changing it. Store all secrets in the deployment platform's encrypted environment configuration.
+Production URLs must use HTTPS. If the backend domain changes, update the proxy destination in `client/vercel.json` and redeploy the frontend. Store all secrets in the deployment platform's encrypted environment configuration.
 
 ## Documentation
 

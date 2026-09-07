@@ -4,7 +4,7 @@ export function createAuthController({ config, authService }) {
   const cookieOptions = {
     httpOnly: true,
     secure: config.isProduction,
-    sameSite: config.isProduction ? "none" : "lax",
+    sameSite: "lax",
     path: "/",
   };
   const respond = (response, request, data, status = 200) =>
