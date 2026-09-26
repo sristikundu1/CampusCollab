@@ -2,6 +2,7 @@ import {
   ArrowLeft,
   CalendarDays,
   CheckCircle2,
+  MessageCircle,
   Send,
   ShieldCheck,
   Users,
@@ -11,7 +12,12 @@ import { Link, useNavigate, useParams } from "react-router-dom";
 import { useAuth } from "../context/auth-context.js";
 import { useToast } from "../context/toast-context.js";
 import { MarketplaceLayout } from "../components/gigs/MarketplaceLayout.jsx";
-import { apiError, participationApi, projectApi } from "../services/api.js";
+import {
+  apiError,
+  messagingApi,
+  participationApi,
+  projectApi,
+} from "../services/api.js";
 const label = (v) =>
   v
     .replaceAll("_", " ")
@@ -60,6 +66,16 @@ export function ProjectDetailsPage() {
     } catch (e) {
       notify(apiError(e).message, "error");
     } finally {
+      setBusy(false);
+    }
+  };
+  const openConversation = async () => {
+    setBusy(true);
+    try {
+      const response = await messagingApi.resolve("PROJECT", project.id);
+      navigate(`/dashboard/messages/${response.data.data.conversation.id}`);
+    } catch (e) {
+      notify(apiError(e).message, "error");
       setBusy(false);
     }
   };
@@ -306,6 +322,18 @@ export function ProjectDetailsPage() {
                   </Link>
                 </div>
               )}
+              {(project.isOwner || project.isMember) &&
+                (project.isMember || (project.capacity?.filled ?? 0) > 0) &&
+                !["DRAFT", "ARCHIVED"].includes(project.status) && (
+                  <button
+                    className="btn-primary mt-3 w-full"
+                    disabled={busy}
+                    onClick={openConversation}
+                  >
+                    <MessageCircle size={16} />
+                    Open team conversation
+                  </button>
+                )}
             </section>
             {selected && !project.isOwner && (
               <section className="surface p-6">

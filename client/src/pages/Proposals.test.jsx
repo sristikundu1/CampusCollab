@@ -215,9 +215,7 @@ describe("Proposal workflow", () => {
       `/gigs/${GIG}`,
     );
     expect(
-      await screen.findByText(
-        "No more workers can be accepted for this gig.",
-      ),
+      await screen.findByText("No more workers can be accepted for this gig."),
     ).toBeInTheDocument();
     expect(
       screen.queryByRole("button", { name: "Apply to this Gig" }),

@@ -20,6 +20,8 @@
     "check": "node scripts/check-project.js",
     "db:verify-indexes": "node scripts/verify-database-indexes.js",
     "db:ensure-project-indexes": "node scripts/ensure-project-participation-indexes.js",
+    "db:ensure-messaging-indexes": "node scripts/ensure-messaging-indexes.js",
+    "test:integration:messaging": "node scripts/verify-messaging-database.js",
     "db:seed:uiu": "node scripts/seed-uiu.js",
     "db:seed:skills": "node scripts/seed-skills.js",
     "db:migrate:test": "node scripts/migrate-test-database.js"

@@ -198,3 +198,16 @@ export const participationApi = {
       idempotent(),
     ),
 };
+
+export const messagingApi = {
+  resolve: (contextType, contextId) =>
+    api.post("/conversations", { contextType, contextId }),
+  list: (params = {}) => api.get("/conversations", { params }),
+  get: (conversationId) => api.get(`/conversations/${conversationId}`),
+  messages: (conversationId, params = {}) =>
+    api.get(`/conversations/${conversationId}/messages`, { params }),
+  send: (conversationId, body) =>
+    api.post(`/conversations/${conversationId}/messages`, body),
+  markRead: (conversationId, messageId) =>
+    api.post(`/conversations/${conversationId}/read`, { messageId }),
+};

@@ -5,6 +5,7 @@ import {
   FolderKanban,
   LayoutDashboard,
   MailCheck,
+  MessagesSquare,
   Menu,
   Search,
   UserPlus,
@@ -29,6 +30,7 @@ const links = [
     icon: UserPlus,
   },
   { to: "/dashboard/invitations", label: "Invitations", icon: MailCheck },
+  { to: "/dashboard/messages", label: "Messages", icon: MessagesSquare },
   { to: "/dashboard/bookmarks", label: "Bookmarks", icon: Bookmark },
   { to: "/dashboard/profile", label: "Profile", icon: UserRound },
 ];

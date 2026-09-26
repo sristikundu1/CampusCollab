@@ -19,7 +19,7 @@ Do not report the following as failures unless the development team says they ha
 - University verification email delivery is currently disabled. A valid `@bscse.uiu.ac.bd` account can sign in immediately after registration.
 - Forgot-password and password-reset email delivery are not currently enabled.
 - Profile photo upload is not currently available. User initials are shown as the profile image.
-- Real-time messaging, notification center, and administrator screens are later-phase features.
+- Messaging is available for accepted gig engagements and active project teams. It uses persisted history with visibility-aware polling; notification center and administrator screens remain later-phase features.
 
 ## What the Tester Needs
 

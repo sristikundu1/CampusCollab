@@ -6,6 +6,7 @@ import { createGigRouter } from "../modules/gigs/gig.routes.js";
 import { createProposalRouter } from "../modules/proposals/proposal.routes.js";
 import { createProjectRouter } from "../modules/projects/project.routes.js";
 import { createParticipationRouter } from "../modules/participation/participation.routes.js";
+import { createMessagingRouter } from "../modules/messaging/messaging.routes.js";
 
 export function createV1Router(dependencies) {
   const router = Router();
@@ -22,5 +23,6 @@ export function createV1Router(dependencies) {
   router.use(createProposalRouter(dependencies));
   router.use(createProjectRouter(dependencies));
   router.use(createParticipationRouter(dependencies));
+  router.use(createMessagingRouter(dependencies));
   return router;
 }

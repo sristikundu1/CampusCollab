@@ -20,6 +20,7 @@ import { createGigService } from "./modules/gigs/gig.service.js";
 import { createProposalService } from "./modules/proposals/proposal.service.js";
 import { createProjectService } from "./modules/projects/project.service.js";
 import { createParticipationService } from "./modules/participation/participation.service.js";
+import { createMessagingService } from "./modules/messaging/messaging.service.js";
 
 export function createApp({
   config,
@@ -33,6 +34,7 @@ export function createApp({
   proposalService: proposalServiceOverride,
   projectService: projectServiceOverride,
   participationService: participationServiceOverride,
+  messagingService: messagingServiceOverride,
 }) {
   const app = express();
   const emailService =
@@ -48,6 +50,8 @@ export function createApp({
     projectServiceOverride ?? createProjectService({ config });
   const participationService =
     participationServiceOverride ?? createParticipationService({ config });
+  const messagingService =
+    messagingServiceOverride ?? createMessagingService({ config });
   app.disable("x-powered-by");
   app.set("trust proxy", config.trustProxy);
   app.use(requestContext);
@@ -132,6 +136,7 @@ export function createApp({
       proposalService,
       projectService,
       participationService,
+      messagingService,
     }),
   );
   app.use(notFoundHandler);

@@ -4,23 +4,25 @@ import {
   CheckCircle2,
   Clock3,
   History,
+  MessageCircle,
   Pencil,
   UserRound,
   XCircle,
 } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
-import { Link, useParams } from "react-router-dom";
+import { Link, useNavigate, useParams } from "react-router-dom";
 import { ProposalForm } from "../components/proposals/ProposalForm.jsx";
 import { ProposalStatusBadge } from "../components/proposals/ProposalStatusBadge.jsx";
 import { useAuth } from "../context/auth-context.js";
 import { useToast } from "../context/toast-context.js";
 import { AppShell } from "../layouts/AppShell.jsx";
 import { confirmAction } from "../lib/confirm-action.js";
-import { apiError, proposalApi } from "../services/api.js";
+import { apiError, messagingApi, proposalApi } from "../services/api.js";
 
 const editable = ["SUBMITTED", "SHORTLISTED"];
 export function ProposalDetailsPage() {
   const { proposalId } = useParams();
+  const navigate = useNavigate();
   const { user } = useAuth();
   const { notify } = useToast();
   const [proposal, setProposal] = useState(null);
@@ -101,6 +103,19 @@ export function ProposalDetailsPage() {
     } catch (reason) {
       notify(apiError(reason).message, "error");
     } finally {
+      setBusy(false);
+    }
+  };
+  const openConversation = async () => {
+    setBusy(true);
+    try {
+      const response = await messagingApi.resolve(
+        "GIG_ENGAGEMENT",
+        proposal.id,
+      );
+      navigate(`/dashboard/messages/${response.data.data.conversation.id}`);
+    } catch (reason) {
+      notify(apiError(reason).message, "error");
       setBusy(false);
     }
   };
@@ -247,8 +262,17 @@ export function ProposalDetailsPage() {
                 <CheckCircle2 className="mb-2" />
                 <strong>Proposal accepted.</strong>
                 <p className="mt-1">
-                  Project setup will be available in the next phase.
+                  You can now coordinate privately with the accepted
+                  participant.
                 </p>
+                <button
+                  className="btn-primary mt-4 w-full"
+                  disabled={busy}
+                  onClick={openConversation}
+                >
+                  <MessageCircle size={16} />
+                  Open conversation
+                </button>
               </div>
             )}
             {proposal.status === "SUBMITTED" && (

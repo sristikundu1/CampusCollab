@@ -31,6 +31,7 @@ const mocks = vi.hoisted(() => ({
   inviteAction: vi.fn(),
   notify: vi.fn(),
   confirm: vi.fn(),
+  resolveConversation: vi.fn(),
 }));
 vi.mock("../services/api.js", () => ({
   projectApi: {
@@ -56,6 +57,7 @@ vi.mock("../services/api.js", () => ({
     invite: mocks.invite,
     remove: mocks.remove,
   },
+  messagingApi: { resolve: mocks.resolveConversation },
   apiError: (e) => ({
     status: e?.response?.status,
     message: e?.message || "Request failed",
@@ -183,6 +185,9 @@ beforeEach(() => {
   );
   mocks.myInvites.mockImplementation(() => response({ invitations: [] }));
   mocks.confirm.mockResolvedValue(true);
+  mocks.resolveConversation.mockImplementation(() =>
+    response({ conversation: { id: "f".repeat(24) } }),
+  );
   mocks.joinAction.mockImplementation(() => response({ result: {} }));
 });
 afterEach(() => {

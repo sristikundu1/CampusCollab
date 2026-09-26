@@ -35,6 +35,24 @@ The application is organized as a React single-page application and a modular Ex
 - Invite candidates and accept, reject, or revoke invitations
 - Manage project membership and member departures
 
+### Messaging
+
+- Start one idempotent conversation for an accepted gig engagement or active project team
+- View participant-only conversation details, latest previews, and authoritative unread counts
+- Send immutable plain-text messages with duplicate retry protection and per-account rate limiting
+- Load deterministic cursor-paginated history and persist per-participant read state
+- Receive near-real-time updates through visibility-aware polling that works with Vercel serverless deployment
+- Use the responsive two-pane desktop layout or focused list/chat mobile flow
+
+### Messaging
+
+- Start one idempotent conversation for an accepted gig engagement or active project team
+- View participant-only conversation details, latest previews, and authoritative unread counts
+- Send immutable plain-text messages with duplicate retry protection and per-account rate limiting
+- Load deterministic cursor-paginated history and persist per-participant read state
+- Receive near-real-time updates through visibility-aware polling that works with Vercel serverless deployment
+- Use the responsive two-pane desktop layout or focused list/chat mobile flow
+
 ### Platform foundations
 
 - Responsive React interface with protected and public routes
@@ -71,18 +89,24 @@ flowchart LR
     M --> PROFILE
     M --> GIG
     M --> PROJECT
+    M --> MESSAGE
+    M --> MESSAGE
 
     subgraph MODULES[Modular monolith]
       AUTH[Auth]
       PROFILE[Profiles and skills]
       GIG[Gigs and proposals]
       PROJECT[Projects and participation]
+      MESSAGE[Messaging]
+      MESSAGE[Messaging]
     end
 
     AUTH --> DB[(MongoDB)]
     PROFILE --> DB
     GIG --> DB
     PROJECT --> DB
+    MESSAGE --> DB
+    MESSAGE --> DB
     AUTH --> EMAIL[Brevo Transactional Email API]
 ```
 

@@ -419,6 +419,8 @@ This file imports and exports all 27 registered Mongoose models so schemas and i
 | `joinRequests` | `modules/participation/join-request.model.js` | Student requests to join openings |
 | `invitations` | `modules/participation/invitation.model.js` | Owner invitations to candidates |
 | `projectMemberships` | `modules/participation/project-membership.model.js` | Accepted project members |
+| `conversations` | `modules/messaging/conversation.model.js` | Authorized opportunity conversations and participant read state |
+| `messages` | `modules/messaging/message.model.js` | Immutable, idempotent conversation messages |
 
 All model paths above are relative to `server/src/`.
 
@@ -428,8 +430,6 @@ These schemas and indexes exist, but this version does not yet expose complete c
 
 | Collection | Model file | Future area |
 |---|---|---|
-| `conversations` | `modules/messaging/conversation.model.js` | Messaging |
-| `messages` | `modules/messaging/message.model.js` | Messaging |
 | `attachments` | `modules/files/attachment.model.js` | File attachments |
 | `notifications` | `modules/notifications/notification.model.js` | Notifications |
 | `completionRecords` | `modules/completion/completion-record.model.js` | Work completion |
@@ -459,7 +459,7 @@ These schemas and indexes exist, but this version does not yet expose complete c
 
 You can explain the current backend like this:
 
-> The backend is a modular Express application. `server.js` validates the environment, connects MongoDB, creates the Express app, and starts port 5000. `app.js` installs security, CORS, JSON parsing, logging, and error middleware, then mounts all business routes under `/api/v1`. Each feature is separated into route, validation, controller, service, and model files. The route chooses the HTTP endpoint, Zod validates the request, the controller translates HTTP data, the service enforces ownership and lifecycle rules, and the Mongoose model reads or writes a named MongoDB collection. The implemented feature modules are authentication, profiles, skills, gigs, proposals, projects, and participation. Other collections such as messaging and notifications are currently database foundations for future implementation.
+> The backend is a modular Express application. `server.js` validates the environment, connects MongoDB, creates the Express app, and starts port 5000. `app.js` installs security, CORS, JSON parsing, logging, and error middleware, then mounts all business routes under `/api/v1`. Each feature is separated into route, validation, controller, service, and model files. The route chooses the HTTP endpoint, Zod validates the request, the controller translates HTTP data, the service enforces ownership and lifecycle rules, and the Mongoose model reads or writes a named MongoDB collection. The implemented feature modules are authentication, profiles, skills, gigs, proposals, projects, participation, and messaging. Messaging reuses accepted gig proposals and active project memberships as its authorization boundary; notifications and the other remaining foundation collections are future work.
 
 For a live code example, open these files in order:
 
