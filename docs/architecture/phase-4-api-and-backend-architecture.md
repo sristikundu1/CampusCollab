@@ -513,7 +513,7 @@ The canonical backend template is `C:\CampusColab\server\.env.example`; the manu
 | Application | `NODE_ENV`, `PORT`, `API_URL`, `CLIENT_URL`, `LOG_LEVEL`, `TRUST_PROXY` | Required; non-secret |
 | Database | `MONGODB_URI` | Required secret |
 | Session/CSRF | `SESSION_SECRET`, `CSRF_SECRET`, `SESSION_COOKIE_NAME`, `SESSION_TTL_DAYS` | Secrets plus public behavior values; required |
-| Email | `SMTP_HOST`, `SMTP_PORT`, `SMTP_SECURE`, `SMTP_USER`, `SMTP_PASSWORD`, `EMAIL_FROM` | Required for verification/recovery; credentials secret |
+| Email | `RESEND_API_KEY`, `EMAIL_FROM` | Required for verification/recovery through the Resend HTTPS API; API key secret |
 | Distributed coordination | Deferred | The current MVP uses per-instance in-memory rate limits; evaluate a shared store only when horizontally scaling. |
 | Storage | `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`, `CLOUDINARY_API_SECRET`, `CLOUDINARY_FOLDER`, `MAX_UPLOAD_BYTES` | Required when attachment/upload endpoints enabled |
 
@@ -585,7 +585,7 @@ Log categories:
 - Metrics: request rate/error/latency by route template, DB pool saturation/selection latency, transaction conflicts/retries, limiter denials, email/storage/job outcomes, outbox lag, queue depth, and readiness.
 - Alert on elevated 5xx, login attack patterns, sustained capacity conflicts, outbox/deletion failure, unavailable MongoDB/Redis, and moderation queue SLA.
 
-Mandatory redaction keys/patterns include password, authorization/cookie headers, session/CSRF tokens, verification/reset tokens, SMTP/storage/database credentials, signed upload/delivery URLs, private message text, report evidence, and sensitive profile fields. Avoid high-cardinality raw IDs in metrics labels.
+Mandatory redaction keys/patterns include password, authorization/cookie headers, session/CSRF tokens, verification/reset tokens, email-provider/storage/database credentials, signed upload/delivery URLs, private message text, report evidence, and sensitive profile fields. Avoid high-cardinality raw IDs in metrics labels.
 
 ## 14. Event and Future Socket.IO Architecture
 

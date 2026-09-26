@@ -82,7 +82,7 @@ Phase 5 boot requirements:
 | `LOG_LEVEL` | Structured log threshold |
 | `TRUST_PROXY` | Explicit boolean; production value depends on hosting topology |
 
-`SESSION_SECRET` and `CSRF_SECRET` are parsed only when real non-placeholder values exist, but they are not required until Phase 6. SMTP, Redis, and Cloudinary variables are not read by this foundation.
+This historical foundation phase initially deferred email delivery, Redis, and Cloudinary. The current application now requires Resend API configuration for university verification while Redis and Cloudinary remain unused.
 
 Production configuration rejects non-HTTPS frontend/backend origins. Startup failure shows variable names and safe reasons, never values.
 

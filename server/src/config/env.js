@@ -112,14 +112,7 @@ const environmentSchema = z
       })
       .default("true")
       .transform(() => true),
-    SMTP_HOST: z.string().trim().optional(),
-    SMTP_PORT: z.coerce.number().int().min(1).max(65535).default(587),
-    SMTP_SECURE: z
-      .enum(["true", "false"])
-      .default("false")
-      .transform((value) => value === "true"),
-    SMTP_USER: optionalFutureSecret,
-    SMTP_PASSWORD: optionalFutureSecret,
+    RESEND_API_KEY: optionalFutureSecret,
     EMAIL_FROM: optionalFutureEmail,
   })
   .superRefine((value, context) => {
@@ -135,12 +128,7 @@ const environmentSchema = z
       }
     }
     if (value.NODE_ENV !== "test") {
-      for (const key of [
-        "SMTP_HOST",
-        "SMTP_USER",
-        "SMTP_PASSWORD",
-        "EMAIL_FROM",
-      ]) {
+      for (const key of ["RESEND_API_KEY", "EMAIL_FROM"]) {
         if (!value[key])
           context.addIssue({
             code: "custom",
@@ -181,17 +169,10 @@ export function parseEnvironment(source = process.env) {
     sessionCookieName: result.data.SESSION_COOKIE_NAME,
     sessionTtlDays: result.data.SESSION_TTL_DAYS,
     requireEmailVerification: result.data.REQUIRE_EMAIL_VERIFICATION,
-    smtp:
-      result.data.SMTP_HOST &&
-      result.data.SMTP_USER &&
-      result.data.SMTP_PASSWORD &&
-      result.data.EMAIL_FROM
+    resend:
+      result.data.RESEND_API_KEY && result.data.EMAIL_FROM
         ? {
-            host: result.data.SMTP_HOST,
-            port: result.data.SMTP_PORT,
-            secure: result.data.SMTP_SECURE,
-            user: result.data.SMTP_USER,
-            password: result.data.SMTP_PASSWORD,
+            apiKey: result.data.RESEND_API_KEY,
             from: result.data.EMAIL_FROM,
           }
         : null,
@@ -211,5 +192,7 @@ export function safeConfigurationSummary(config) {
     mongodbDatabase: config.mongodbDbName,
     mongodbDnsOverrideConfigured: config.mongodbDnsServers.length > 0,
     emailVerificationRequired: config.requireEmailVerification,
+    emailProvider: "resend",
+    emailDeliveryConfigured: Boolean(config.resend),
   };
 }

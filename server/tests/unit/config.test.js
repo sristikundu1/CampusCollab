@@ -68,13 +68,11 @@ test("configuration rejects a missing or placeholder MONGODB_URI", () => {
 test("email placeholders are ignored only in the test environment", () => {
   const config = parseEnvironment({
     ...valid,
-    SMTP_HOST: "your_smtp_host_here",
-    SMTP_USER: "your_smtp_username_here",
-    SMTP_PASSWORD: "your_smtp_password_here",
-    EMAIL_FROM: "your_sender_email_here",
+    RESEND_API_KEY: "your_resend_api_key_here",
+    EMAIL_FROM: "your_verified_sender_email_here",
   });
 
-  assert.equal(config.smtp, null);
+  assert.equal(config.resend, null);
 });
 
 test("production configuration requires HTTPS origins", () => {
@@ -89,9 +87,7 @@ test("production configuration requires HTTPS origins", () => {
       CLIENT_URL: "https://app.example.com",
       API_URL: "https://api.example.com",
       REQUIRE_EMAIL_VERIFICATION: "true",
-      SMTP_HOST: "smtp.example.com",
-      SMTP_USER: "smtp-user",
-      SMTP_PASSWORD: "smtp-password",
+      RESEND_API_KEY: "re_test_api_key",
       EMAIL_FROM: "noreply@example.com",
     }),
   );

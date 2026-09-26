@@ -1,8 +1,12 @@
-import nodemailer from "nodemailer";
+import { Resend } from "resend";
 import { DependencyUnavailableError } from "../../errors/application-error.js";
 
-export function createEmailService(config, logger) {
-  if (!config.smtp) {
+export function createEmailService(
+  config,
+  logger,
+  createClient = (apiKey) => new Resend(apiKey),
+) {
+  if (!config.resend) {
     return {
       configured: false,
       async sendVerification() {
@@ -19,15 +23,16 @@ export function createEmailService(config, logger) {
       },
     };
   }
-  const transport = nodemailer.createTransport({
-    host: config.smtp.host,
-    port: config.smtp.port,
-    secure: config.smtp.secure,
-    auth: { user: config.smtp.user, pass: config.smtp.password },
-  });
+  const client = createClient(config.resend.apiKey);
   async function send({ to, subject, text }) {
     try {
-      await transport.sendMail({ from: config.smtp.from, to, subject, text });
+      const { error } = await client.emails.send({
+        from: config.resend.from,
+        to,
+        subject,
+        text,
+      });
+      if (error) throw error;
     } catch (error) {
       logger.error(
         { event: "email.delivery_failed", errorType: error?.name },
