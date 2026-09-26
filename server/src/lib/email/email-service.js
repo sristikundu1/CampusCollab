@@ -1,12 +1,12 @@
-import { Resend } from "resend";
+import { BrevoClient } from "@getbrevo/brevo";
 import { DependencyUnavailableError } from "../../errors/application-error.js";
 
 export function createEmailService(
   config,
   logger,
-  createClient = (apiKey) => new Resend(apiKey),
+  createClient = (apiKey) => new BrevoClient({ apiKey }),
 ) {
-  if (!config.resend) {
+  if (!config.brevo) {
     return {
       configured: false,
       async sendVerification() {
@@ -23,16 +23,18 @@ export function createEmailService(
       },
     };
   }
-  const client = createClient(config.resend.apiKey);
+  const client = createClient(config.brevo.apiKey);
   async function send({ to, subject, text }) {
     try {
-      const { error } = await client.emails.send({
-        from: config.resend.from,
-        to,
+      await client.transactionalEmails.sendTransacEmail({
+        sender: {
+          email: config.brevo.from,
+          name: config.brevo.fromName,
+        },
+        to: [{ email: to }],
         subject,
-        text,
+        textContent: text,
       });
-      if (error) throw error;
     } catch (error) {
       logger.error(
         { event: "email.delivery_failed", errorType: error?.name },

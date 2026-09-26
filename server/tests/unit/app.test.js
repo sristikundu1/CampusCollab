@@ -13,7 +13,7 @@ const config = {
   sessionTtlDays: 30,
   sessionSecret: "test-session-secret-with-more-than-thirty-two-characters",
   csrfSecret: "test-csrf-secret-with-more-than-thirty-two-characters",
-  resend: null,
+  brevo: null,
 };
 const logger = createLogger({ level: "silent", environment: "test" });
 

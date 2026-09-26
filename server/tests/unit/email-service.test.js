@@ -9,22 +9,26 @@ const logger = {
   },
 };
 
-test("Resend receives the verification message without exposing its API key", async () => {
+test("Brevo receives the verification message without exposing its API key", async () => {
   const messages = [];
   const keys = [];
   const service = createEmailService(
     {
       clientUrl: "http://localhost:5173",
-      resend: { apiKey: "re_private", from: "verify@example.com" },
+      brevo: {
+        apiKey: "xkeysib-private",
+        from: "verify@example.com",
+        fromName: "CampusCollab",
+      },
     },
     logger,
     (apiKey) => {
       keys.push(apiKey);
       return {
-        emails: {
-          send: async (message) => {
+        transactionalEmails: {
+          sendTransacEmail: async (message) => {
             messages.push(message);
-            return { data: { id: "email-id" }, error: null };
+            return { messageId: "email-id" };
           },
         },
       };
@@ -34,26 +38,34 @@ test("Resend receives the verification message without exposing its API key", as
   await service.sendVerification("student@university.edu", "004200", 10);
 
   assert.equal(service.configured, true);
-  assert.deepEqual(keys, ["re_private"]);
-  assert.equal(messages[0].from, "verify@example.com");
-  assert.equal(messages[0].to, "student@university.edu");
-  assert.match(messages[0].text, /004200/);
-  assert.equal(JSON.stringify(messages[0]).includes("re_private"), false);
+  assert.deepEqual(keys, ["xkeysib-private"]);
+  assert.deepEqual(messages[0].sender, {
+    email: "verify@example.com",
+    name: "CampusCollab",
+  });
+  assert.deepEqual(messages[0].to, [{ email: "student@university.edu" }]);
+  assert.match(messages[0].textContent, /004200/);
+  assert.equal(JSON.stringify(messages[0]).includes("xkeysib-private"), false);
 });
 
-test("Resend API errors become safe dependency errors", async () => {
+test("Brevo API errors become safe dependency errors", async () => {
   logger.errors.length = 0;
   const service = createEmailService(
     {
-      resend: { apiKey: "re_private", from: "verify@example.com" },
+      brevo: {
+        apiKey: "xkeysib-private",
+        from: "verify@example.com",
+        fromName: "CampusCollab",
+      },
     },
     logger,
     () => ({
-      emails: {
-        send: async () => ({
-          data: null,
-          error: { name: "validation_error", message: "Provider detail" },
-        }),
+      transactionalEmails: {
+        sendTransacEmail: async () => {
+          const error = new Error("Provider detail");
+          error.name = "BrevoError";
+          throw error;
+        },
       },
     }),
   );
@@ -63,11 +75,11 @@ test("Resend API errors become safe dependency errors", async () => {
     (error) => error.code === "EMAIL_DELIVERY_FAILED" && error.status === 503,
   );
   assert.equal(logger.errors.length, 1);
-  assert.equal(logger.errors[0].context.errorType, "validation_error");
+  assert.equal(logger.errors[0].context.errorType, "BrevoError");
 });
 
-test("missing Resend configuration fails closed", async () => {
-  const service = createEmailService({ resend: null }, logger);
+test("missing Brevo configuration fails closed", async () => {
+  const service = createEmailService({ brevo: null }, logger);
 
   assert.equal(service.configured, false);
   await assert.rejects(

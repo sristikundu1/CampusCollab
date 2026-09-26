@@ -112,8 +112,9 @@ const environmentSchema = z
       })
       .default("true")
       .transform(() => true),
-    RESEND_API_KEY: optionalFutureSecret,
+    BREVO_API_KEY: optionalFutureSecret,
     EMAIL_FROM: optionalFutureEmail,
+    EMAIL_FROM_NAME: z.string().trim().min(1).max(100).default("CampusCollab"),
   })
   .superRefine((value, context) => {
     if (value.NODE_ENV === "production") {
@@ -128,7 +129,7 @@ const environmentSchema = z
       }
     }
     if (value.NODE_ENV !== "test") {
-      for (const key of ["RESEND_API_KEY", "EMAIL_FROM"]) {
+      for (const key of ["BREVO_API_KEY", "EMAIL_FROM"]) {
         if (!value[key])
           context.addIssue({
             code: "custom",
@@ -169,11 +170,12 @@ export function parseEnvironment(source = process.env) {
     sessionCookieName: result.data.SESSION_COOKIE_NAME,
     sessionTtlDays: result.data.SESSION_TTL_DAYS,
     requireEmailVerification: result.data.REQUIRE_EMAIL_VERIFICATION,
-    resend:
-      result.data.RESEND_API_KEY && result.data.EMAIL_FROM
+    brevo:
+      result.data.BREVO_API_KEY && result.data.EMAIL_FROM
         ? {
-            apiKey: result.data.RESEND_API_KEY,
+            apiKey: result.data.BREVO_API_KEY,
             from: result.data.EMAIL_FROM,
+            fromName: result.data.EMAIL_FROM_NAME,
           }
         : null,
     isProduction: result.data.NODE_ENV === "production",
@@ -192,7 +194,7 @@ export function safeConfigurationSummary(config) {
     mongodbDatabase: config.mongodbDbName,
     mongodbDnsOverrideConfigured: config.mongodbDnsServers.length > 0,
     emailVerificationRequired: config.requireEmailVerification,
-    emailProvider: "resend",
-    emailDeliveryConfigured: Boolean(config.resend),
+    emailProvider: "brevo",
+    emailDeliveryConfigured: Boolean(config.brevo),
   };
 }

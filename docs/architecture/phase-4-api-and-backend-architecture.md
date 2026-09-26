@@ -513,7 +513,7 @@ The canonical backend template is `C:\CampusColab\server\.env.example`; the manu
 | Application | `NODE_ENV`, `PORT`, `API_URL`, `CLIENT_URL`, `LOG_LEVEL`, `TRUST_PROXY` | Required; non-secret |
 | Database | `MONGODB_URI` | Required secret |
 | Session/CSRF | `SESSION_SECRET`, `CSRF_SECRET`, `SESSION_COOKIE_NAME`, `SESSION_TTL_DAYS` | Secrets plus public behavior values; required |
-| Email | `RESEND_API_KEY`, `EMAIL_FROM` | Required for verification/recovery through the Resend HTTPS API; API key secret |
+| Email | `BREVO_API_KEY`, `EMAIL_FROM`, `EMAIL_FROM_NAME` | Required for verification/recovery through the Brevo HTTPS API; API key secret |
 | Distributed coordination | Deferred | The current MVP uses per-instance in-memory rate limits; evaluate a shared store only when horizontally scaling. |
 | Storage | `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`, `CLOUDINARY_API_SECRET`, `CLOUDINARY_FOLDER`, `MAX_UPLOAD_BYTES` | Required when attachment/upload endpoints enabled |
 

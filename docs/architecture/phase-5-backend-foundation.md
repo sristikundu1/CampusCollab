@@ -82,7 +82,7 @@ Phase 5 boot requirements:
 | `LOG_LEVEL` | Structured log threshold |
 | `TRUST_PROXY` | Explicit boolean; production value depends on hosting topology |
 
-This historical foundation phase initially deferred email delivery, Redis, and Cloudinary. The current application now requires Resend API configuration for university verification while Redis and Cloudinary remain unused.
+This historical foundation phase initially deferred email delivery, Redis, and Cloudinary. The current application now requires Brevo API configuration for university verification while Redis and Cloudinary remain unused.
 
 Production configuration rejects non-HTTPS frontend/backend origins. Startup failure shows variable names and safe reasons, never values.
 

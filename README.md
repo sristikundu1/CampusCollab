@@ -56,7 +56,7 @@ The application is organized as a React single-page application and a modular Ex
 | Backend | Node.js 22+, Express 5 |
 | Database | MongoDB, Mongoose |
 | Authentication | Opaque server-side sessions, HTTP-only cookies, CSRF tokens |
-| Email | Resend HTTPS API (required outside automated tests) |
+| Email | Brevo HTTPS API (required outside automated tests) |
 | Testing | Node test runner, Vitest, Testing Library, jsdom |
 | Deployment | Separate Vercel projects for `client/` and `server/` |
 
@@ -83,10 +83,10 @@ flowchart LR
     PROFILE --> DB
     GIG --> DB
     PROJECT --> DB
-    AUTH --> EMAIL[Resend Email API]
+    AUTH --> EMAIL[Brevo Transactional Email API]
 ```
 
-The frontend never receives database, session, or Resend secrets. It knows only the public API base URL. The backend validates its environment at startup, establishes the database connection, then starts accepting HTTP requests.
+The frontend never receives database, session, or Brevo secrets. It knows only the public API base URL. The backend validates its environment at startup, establishes the database connection, then starts accepting HTTP requests.
 
 ### Repository layout
 
@@ -185,8 +185,9 @@ Edit `server/.env` and replace these required placeholders:
 MONGODB_URI=mongodb+srv://YOUR_USER:YOUR_URL_ENCODED_PASSWORD@YOUR_CLUSTER/YOUR_DATABASE?retryWrites=true&w=majority
 SESSION_SECRET=YOUR_RANDOM_SESSION_SECRET_OF_AT_LEAST_32_CHARACTERS
 CSRF_SECRET=YOUR_DIFFERENT_RANDOM_CSRF_SECRET_OF_AT_LEAST_32_CHARACTERS
-RESEND_API_KEY=YOUR_RESEND_API_KEY
+BREVO_API_KEY=YOUR_BREVO_API_KEY
 EMAIL_FROM=YOUR_VERIFIED_SENDER_ADDRESS
+EMAIL_FROM_NAME=CampusCollab
 ```
 
 You can generate independent local secrets with Node.js:
@@ -268,7 +269,7 @@ Open <http://localhost:5173>.
 | `MONGODB_URI` | Authenticated MongoDB connection string |
 | `SESSION_SECRET` | Secret used by the server-side session system; minimum 32 characters |
 | `CSRF_SECRET` | Independent CSRF integrity secret; minimum 32 characters |
-| `RESEND_API_KEY` | Secret API key created in the Resend dashboard |
+| `BREVO_API_KEY` | Secret API key created in the Brevo dashboard |
 | `EMAIL_FROM` | Verified sender email address |
 
 ### Important backend settings
@@ -283,7 +284,7 @@ Open <http://localhost:5173>.
 | `API_URL` | `http://localhost:5000` | Public backend origin |
 | `REQUIRE_EMAIL_VERIFICATION` | `true` | Mandatory; cannot be disabled |
 
-Resend settings are required in local development and production because registration requires a 6-digit inbox verification code. Cloudinary variables are reserved for later upload work and are not used by the current application. See [the environment guide](docs/setup/environment-variables.md) for the complete reference.
+Brevo settings are required in local development and production because registration requires a 6-digit inbox verification code. Cloudinary variables are reserved for later upload work and are not used by the current application. See [the environment guide](docs/setup/environment-variables.md) for the complete reference.
 
 ## Main user flows
 
@@ -413,7 +414,7 @@ Production URLs must use HTTPS. If the backend domain changes, update the proxy 
 
 ## Security notes
 
-- Never commit `.env`, database credentials, session secrets, CSRF secrets, or Resend API keys.
+- Never commit `.env`, database credentials, session secrets, CSRF secrets, or Brevo API keys.
 - Use separate credentials and databases for development and production.
 - Rotate any secret immediately if it is accidentally shared or committed.
 - Keep `CLIENT_URL` exact; do not replace credentialed CORS with a wildcard.

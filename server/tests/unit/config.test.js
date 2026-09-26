@@ -68,11 +68,11 @@ test("configuration rejects a missing or placeholder MONGODB_URI", () => {
 test("email placeholders are ignored only in the test environment", () => {
   const config = parseEnvironment({
     ...valid,
-    RESEND_API_KEY: "your_resend_api_key_here",
+    BREVO_API_KEY: "your_brevo_api_key_here",
     EMAIL_FROM: "your_verified_sender_email_here",
   });
 
-  assert.equal(config.resend, null);
+  assert.equal(config.brevo, null);
 });
 
 test("production configuration requires HTTPS origins", () => {
@@ -87,7 +87,7 @@ test("production configuration requires HTTPS origins", () => {
       CLIENT_URL: "https://app.example.com",
       API_URL: "https://api.example.com",
       REQUIRE_EMAIL_VERIFICATION: "true",
-      RESEND_API_KEY: "re_test_api_key",
+      BREVO_API_KEY: "xkeysib-test-api-key",
       EMAIL_FROM: "noreply@example.com",
     }),
   );

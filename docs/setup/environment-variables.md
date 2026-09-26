@@ -4,11 +4,11 @@
 **Authentication decision:** opaque, revocable server-side sessions stored as hashed tokens; no JWT variables are used.  
 **Rule:** `.env.example` contains names and placeholders only. Create `.env` locally yourself and never commit it.
 
-`REQUIRE_EMAIL_VERIFICATION=true` is mandatory. Registration sends a short-lived 6-digit code to the university inbox; an account cannot sign in until that code is verified. The server rejects non-test startup when verification is disabled or Resend configuration is incomplete.
+`REQUIRE_EMAIL_VERIFICATION=true` is mandatory. Registration sends a short-lived 6-digit code to the university inbox; an account cannot sign in until that code is verified. The server rejects non-test startup when verification is disabled or Brevo configuration is incomplete.
 
 `MONGODB_DB_NAME` explicitly selects the application database. Use `CampusCollab`; without an explicit database selection, MongoDB drivers commonly fall back to `test`.
 
-> **Current runtime:** MongoDB, session, CSRF, and Resend API values are required. Redis and Cloudinary are not used by the implemented application.
+> **Current runtime:** MongoDB, session, CSRF, and Brevo API values are required. Redis and Cloudinary are not used by the implemented application.
 
 ## 1. Configuration classes
 
@@ -26,7 +26,8 @@ These values describe runtime behavior and may appear in deployment configuratio
 | `TRUST_PROXY` | Whether Express trusts the deployment proxy for secure cookies and client IP. | Determine from hosting topology. | Yes | Yes | `false` locally; set the exact trusted hop count/network in implementation for production, not indiscriminate trust. |
 | `SESSION_COOKIE_NAME` | Name of the opaque session cookie. | Project choice. | Yes | Yes | Keep stable per environment; never encode secrets in the name. |
 | `SESSION_TTL_DAYS` | Maximum session lifetime before renewal/re-authentication. | Product/security policy. | Yes | Yes | Proposed MVP default is 30; production may shorten after risk review. |
-| `EMAIL_FROM` | Verified sender identity displayed on CampusCollab mail. | Verify an address/domain in Resend. | Yes | Usually safe | Development may use a Resend test sender within its restrictions; production needs a verified domain/address. |
+| `EMAIL_FROM` | Verified sender email displayed on CampusCollab mail. | Add and verify a sender in Brevo. | Yes | Usually safe | Must exactly match a verified Brevo sender. |
+| `EMAIL_FROM_NAME` | Human-readable sender name. | Choose a recognizable label. | Yes | Yes | Defaults to `CampusCollab`. |
 | `CLOUDINARY_CLOUD_NAME` | Public Cloudinary account namespace. | Cloudinary dashboard. | Yes | Generally safe, but do not confuse it with credentials | Use separate development and production accounts/folders when possible. |
 | `CLOUDINARY_FOLDER` | Namespace for uploaded CampusCollab objects. | Choose a folder name. | Yes | Yes | Separate environments, for example provider-side folders, to avoid mixed data. |
 | `MAX_UPLOAD_BYTES` | Server-side upper bound for an individual upload. | Security/product policy. | Yes | Yes | Proposed placeholder is 10 MiB; the attachment policy remains an approval item. |
@@ -40,7 +41,7 @@ Store these in local `.env`, a CI secret store, and the production platform's se
 | `MONGODB_URI` | Authenticated connection string for the MongoDB deployment containing CampusCollab data. | Manually create/configure MongoDB Atlas or another supported replica-set deployment, create a least-privilege database user, permit the backend network, and copy the driver connection URI. | Yes | **Never** | Use separate databases/users. Transactions require a replica set or sharded cluster; production TLS and backups are mandatory. |
 | `SESSION_SECRET` | Cryptographic secret for signing/deriving opaque session security material. | Generate outside source control with an OS password/secret generator using cryptographically secure randomness; target at least 32 random bytes. | Yes | **Never** | Use a different value per environment. Rotation needs a planned invalidation or key-ring migration. |
 | `CSRF_SECRET` | Independent key for CSRF token integrity. | Generate independently using the same secure process. Do not reuse `SESSION_SECRET`. | Yes | **Never** | Rotation can invalidate outstanding CSRF tokens; deploy deliberately. |
-| `RESEND_API_KEY` | Authorizes CampusCollab to send transactional email through Resend's HTTPS API. | Create a sending-only API key in the Resend dashboard. | Yes | **Never** | Use separate development and production keys; rotate immediately if exposed. |
+| `BREVO_API_KEY` | Authorizes CampusCollab to send transactional email through Brevo's HTTPS API. | Create an API key in Brevo under SMTP & API. | Yes | **Never** | Use separate development and production keys; rotate immediately if exposed. |
 | `CLOUDINARY_API_KEY` | Cloudinary API account identifier used by the backend. | Cloudinary dashboard. | Yes | **Never** as a project rule | Server-side only. Use restricted/environment-specific credentials. |
 | `CLOUDINARY_API_SECRET` | Secret authorizing Cloudinary signing and management calls. | Cloudinary dashboard. | Yes | **Never** | Never expose to React. Rotate immediately if leaked. |
 
@@ -70,7 +71,7 @@ Generate two different cryptographically random values outside the repository. A
 
 ### 2.3 Email credentials
 
-Create a Resend account and API key, then verify the sender domain used by `EMAIL_FROM`. Add the DNS records Resend provides and configure SPF, DKIM, and DMARC for the production sending domain. Email is required for university verification and password reset. CampusCollab uses Resend's HTTPS API and does not require SMTP credentials.
+Create a Brevo account and API key, then add and verify the exact sender address used by `EMAIL_FROM`. A custom domain is not required for this portfolio deployment; Brevo may rewrite a free-address sender to a compliant Brevo-managed address. Email is required for university verification and password reset. CampusCollab uses Brevo's HTTPS API and does not require SMTP credentials.
 
 ### 2.4 Cloudinary/object storage
 

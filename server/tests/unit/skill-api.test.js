@@ -17,7 +17,7 @@ const config = {
   sessionCookieName: "campuscollab_session",
   sessionSecret: "test-session-secret-with-more-than-thirty-two-characters",
   csrfSecret,
-  resend: null,
+  brevo: null,
   requireEmailVerification: false,
 };
 const authService = {
