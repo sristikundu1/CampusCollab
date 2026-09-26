@@ -1,4 +1,4 @@
-import { randomUUID } from "node:crypto";
+import { randomInt, randomUUID } from "node:crypto";
 import {
   AuthenticationError,
   AuthorizationError,
@@ -8,6 +8,7 @@ import {
 import {
   generateOpaqueToken,
   hashOpaqueToken,
+  opaqueTokenMatches,
 } from "../../lib/crypto/opaque-token.js";
 import { hashPassword, verifyPassword } from "../../lib/crypto/password.js";
 import { withTransaction } from "../../lib/mongo/transaction.js";
@@ -21,6 +22,12 @@ import { VerificationChallenge } from "./verification-challenge.model.js";
 
 const HOUR = 60 * 60 * 1000;
 const DAY = 24 * HOUR;
+const VERIFICATION_CODE_TTL_MS = 10 * 60 * 1000;
+const MAX_VERIFICATION_ATTEMPTS = 5;
+
+export function generateVerificationCode() {
+  return randomInt(0, 1_000_000).toString().padStart(6, "0");
+}
 
 function publicUser(user, profile, affiliation) {
   return {
@@ -47,7 +54,15 @@ function publicUser(user, profile, affiliation) {
   };
 }
 
-export function createAuthService({ config, emailService }) {
+export function createAuthService({
+  config,
+  emailService,
+  UserModel = User,
+  AffiliationModel = UniversityAffiliation,
+  ChallengeModel = VerificationChallenge,
+  transaction = withTransaction,
+  createCode = generateVerificationCode,
+}) {
   const secret = () => {
     if (!config.sessionSecret)
       throw new Error(
@@ -55,23 +70,34 @@ export function createAuthService({ config, emailService }) {
       );
     return config.sessionSecret;
   };
-  async function issueChallenge(userId, affiliationId, email, purpose) {
-    const token = generateOpaqueToken();
-    await VerificationChallenge.updateMany(
+  async function issueChallenge(
+    userId,
+    affiliationId,
+    email,
+    purpose,
+    { value = generateOpaqueToken(), ttlMs = HOUR } = {},
+  ) {
+    await ChallengeModel.updateMany(
       { userId, purpose, status: "ISSUED" },
       { status: "SUPERSEDED", supersededAt: new Date() },
     );
-    await VerificationChallenge.create({
+    await ChallengeModel.create({
       userId,
       affiliationId,
       purpose,
-      tokenHash: hashOpaqueToken(token, secret()),
+      tokenHash: hashOpaqueToken(value, secret()),
       destinationEmail: email,
       status: "ISSUED",
       issuedAt: new Date(),
-      expiresAt: new Date(Date.now() + HOUR),
+      expiresAt: new Date(Date.now() + ttlMs),
     });
-    return token;
+    return value;
+  }
+  async function issueVerificationCode(userId, affiliationId, email) {
+    return issueChallenge(userId, affiliationId, email, "UNIVERSITY_VERIFY", {
+      value: createCode(),
+      ttlMs: VERIFICATION_CODE_TTL_MS,
+    });
   }
   return {
     async register(input) {
@@ -102,9 +128,8 @@ export function createAuthService({ config, emailService }) {
           "An account already exists for this email.",
         );
       const passwordHash = await hashPassword(input.password);
-      const verificationRequired = config.requireEmailVerification;
       let result;
-      await withTransaction(async (session) => {
+      await transaction(async (session) => {
         const [user] = await User.create(
           [
             {
@@ -112,7 +137,7 @@ export function createAuthService({ config, emailService }) {
               passwordHash,
               primaryExperience: input.primaryExperience,
               capabilities: ["STUDENT"],
-              status: verificationRequired ? "PENDING_VERIFICATION" : "ACTIVE",
+              status: "PENDING_VERIFICATION",
             },
           ],
           { session },
@@ -142,36 +167,26 @@ export function createAuthService({ config, emailService }) {
         );
         result = { user, profile, affiliation };
       });
-      if (!verificationRequired) {
-        return {
-          message: "Account created. You can now sign in.",
-          requiresEmailVerification: false,
-        };
-      }
-      const token = await issueChallenge(
+      const code = await issueVerificationCode(
         result.user._id,
         result.affiliation._id,
         input.email,
-        "UNIVERSITY_VERIFY",
       );
-      await emailService.sendVerification(input.email, token);
+      await emailService.sendVerification(input.email, code, 10);
       return {
         message:
-          "Account created. Check your university email to verify your account.",
+          "Account created. Enter the code sent to your university email.",
         requiresEmailVerification: true,
+        expiresInSeconds: VERIFICATION_CODE_TTL_MS / 1000,
       };
     },
     async resendVerification(email) {
-      if (!config.requireEmailVerification)
-        return {
-          message: "Email verification is disabled in this environment.",
-        };
-      const user = await User.findOne({
+      const user = await UserModel.findOne({
         email,
-        status: { $in: ["PENDING_VERIFICATION", "ACTIVE"] },
+        status: "PENDING_VERIFICATION",
       });
       if (user) {
-        const affiliation = await UniversityAffiliation.findOne({
+        const affiliation = await AffiliationModel.findOne({
           userId: user._id,
           isActive: true,
           status: "PENDING",
@@ -179,55 +194,81 @@ export function createAuthService({ config, emailService }) {
         if (affiliation)
           await emailService.sendVerification(
             email,
-            await issueChallenge(
-              user._id,
-              affiliation._id,
-              email,
-              "UNIVERSITY_VERIFY",
-            ),
+            await issueVerificationCode(user._id, affiliation._id, email),
+            10,
           );
       }
       return {
         message:
-          "If an eligible pending account exists, a verification email has been sent.",
+          "If an eligible pending account exists, a new verification code has been sent.",
+        expiresInSeconds: VERIFICATION_CODE_TTL_MS / 1000,
       };
     },
-    async verifyEmail(token) {
-      const tokenHash = hashOpaqueToken(token, secret());
-      const challenge = await VerificationChallenge.findOne({
-        tokenHash,
-        purpose: "UNIVERSITY_VERIFY",
-        status: "ISSUED",
-        expiresAt: { $gt: new Date() },
+    async verifyEmail({ email, code }) {
+      const user = await UserModel.findOne({
+        email,
+        status: "PENDING_VERIFICATION",
       });
+      if (!user)
+        throw new ConflictError(
+          "INVALID_OR_EXPIRED_CODE",
+          "The verification code is invalid or expired.",
+        );
+      const challenge = await ChallengeModel.findOneAndUpdate(
+        {
+          userId: user._id,
+          purpose: "UNIVERSITY_VERIFY",
+          status: "ISSUED",
+          expiresAt: { $gt: new Date() },
+          attemptCount: { $lt: MAX_VERIFICATION_ATTEMPTS },
+        },
+        { $inc: { attemptCount: 1, version: 1 } },
+        { new: true },
+      ).select("+tokenHash");
       if (!challenge)
         throw new ConflictError(
-          "INVALID_OR_EXPIRED_TOKEN",
-          "The verification link is invalid or expired.",
+          "INVALID_OR_EXPIRED_CODE",
+          "The verification code is invalid or expired.",
         );
-      await withTransaction(async (session) => {
-        const consumed = await VerificationChallenge.updateOne(
-          { _id: challenge._id, status: "ISSUED" },
+      if (!opaqueTokenMatches(code, challenge.tokenHash, secret())) {
+        if (challenge.attemptCount >= MAX_VERIFICATION_ATTEMPTS)
+          await ChallengeModel.updateOne(
+            { _id: challenge._id, status: "ISSUED" },
+            { status: "REVOKED", $inc: { version: 1 } },
+          );
+        throw new ConflictError(
+          "INVALID_OR_EXPIRED_CODE",
+          "The verification code is invalid or expired.",
+        );
+      }
+      await transaction(async (session) => {
+        const consumed = await ChallengeModel.updateOne(
+          {
+            _id: challenge._id,
+            tokenHash: challenge.tokenHash,
+            purpose: "UNIVERSITY_VERIFY",
+            status: "ISSUED",
+          },
           { status: "CONSUMED", consumedAt: new Date(), $inc: { version: 1 } },
           { session },
         );
         if (!consumed.modifiedCount)
           throw new ConflictError(
-            "TOKEN_ALREADY_USED",
-            "The verification link has already been used.",
+            "CODE_ALREADY_USED",
+            "The verification code has already been used.",
           );
-        await UniversityAffiliation.updateOne(
+        const affiliationUpdate = await AffiliationModel.updateOne(
           { _id: challenge.affiliationId, status: "PENDING" },
           {
             status: "VERIFIED",
-            verificationMethod: "EMAIL_LINK",
+            verificationMethod: "EMAIL_CODE",
             verifiedAt: new Date(),
             verificationExpiresAt: new Date(Date.now() + 365 * DAY),
             $inc: { version: 1 },
           },
           { session },
         );
-        await User.updateOne(
+        const userUpdate = await UserModel.updateOne(
           { _id: challenge.userId, status: "PENDING_VERIFICATION" },
           {
             status: "ACTIVE",
@@ -236,6 +277,11 @@ export function createAuthService({ config, emailService }) {
           },
           { session },
         );
+        if (!affiliationUpdate.modifiedCount || !userUpdate.modifiedCount)
+          throw new ConflictError(
+            "CODE_ALREADY_USED",
+            "The verification code has already been used.",
+          );
       });
       return { message: "Your university email has been verified." };
     },
@@ -254,22 +300,13 @@ export function createAuthService({ config, emailService }) {
         Profile.findOne({ userId: user._id }),
       ]);
       if (
-        config.requireEmailVerification &&
-        (user.status === "PENDING_VERIFICATION" ||
-          affiliation?.status !== "VERIFIED")
+        user.status === "PENDING_VERIFICATION" ||
+        affiliation?.status !== "VERIFIED"
       ) {
         throw new AuthorizationError(
           "EMAIL_VERIFICATION_REQUIRED",
           "Verify your university email before signing in.",
         );
-      }
-      if (
-        !config.requireEmailVerification &&
-        user.status === "PENDING_VERIFICATION"
-      ) {
-        user.status = "ACTIVE";
-        user.statusChangedAt = new Date();
-        user.version += 1;
       }
       if (user.status !== "ACTIVE")
         throw new AuthorizationError(
@@ -316,18 +353,16 @@ export function createAuthService({ config, emailService }) {
           "ACCOUNT_RESTRICTED",
           "This account cannot perform this action.",
         );
-      if (config.requireEmailVerification) {
-        const affiliation = await UniversityAffiliation.findOne({
-          userId: user._id,
-          isActive: true,
-          status: "VERIFIED",
-        });
-        if (!affiliation)
-          throw new AuthorizationError(
-            "EMAIL_VERIFICATION_REQUIRED",
-            "Verify your university email before continuing.",
-          );
-      }
+      const affiliation = await UniversityAffiliation.findOne({
+        userId: user._id,
+        isActive: true,
+        status: "VERIFIED",
+      });
+      if (!affiliation)
+        throw new AuthorizationError(
+          "EMAIL_VERIFICATION_REQUIRED",
+          "Verify your university email before continuing.",
+        );
       return { user, session };
     },
     async currentUser(userId) {

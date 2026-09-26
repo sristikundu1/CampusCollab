@@ -42,9 +42,9 @@ paths:
   /api/v1/auth/me:
     get: { summary: Read the authenticated user and CSRF token, security: [{ sessionCookie: [] }], responses: { '200': { description: Current session }, '401': { description: Authentication required } } }
   /api/v1/auth/verify-email:
-    post: { summary: Verify an email token when verification is enabled, responses: { '200': { description: Address verified }, '422': { $ref: '#/components/responses/ValidationError' } } }
+    post: { summary: Verify a university email with the account email and 6-digit code, responses: { '200': { description: Address verified }, '409': { description: Code invalid, expired, or already used }, '422': { $ref: '#/components/responses/ValidationError' } } }
   /api/v1/auth/verification/resend:
-    post: { summary: Request another verification message when email delivery is enabled, responses: { '202': { description: Request accepted } } }
+    post: { summary: Supersede the prior code and request another verification code, responses: { '202': { description: Request accepted } } }
   /api/v1/auth/password/forgot:
     post: { summary: Request password recovery when email delivery is enabled, responses: { '202': { description: Request accepted } } }
   /api/v1/auth/password/reset:

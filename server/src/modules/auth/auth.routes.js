@@ -9,7 +9,7 @@ import {
   loginRequest,
   registerRequest,
   resetPasswordRequest,
-  tokenRequest,
+  verifyEmailRequest,
 } from "./auth.validation.js";
 
 export function createAuthRouter(dependencies) {
@@ -46,7 +46,7 @@ export function createAuthRouter(dependencies) {
   router.post(
     "/verify-email",
     limiter("verify-email", 10, 60 * 60 * 1000),
-    validateRequest(tokenRequest),
+    validateRequest(verifyEmailRequest),
     controller.verify,
   );
   router.post(

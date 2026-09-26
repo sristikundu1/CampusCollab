@@ -29,7 +29,10 @@ const universityAffiliationSchema = addVersion(
         required: true,
       },
       isActive: { type: Boolean, required: true, default: true },
-      verificationMethod: { type: String, enum: ["EMAIL_LINK"] },
+      verificationMethod: {
+        type: String,
+        enum: ["EMAIL_CODE", "EMAIL_LINK"],
+      },
       verifiedAt: Date,
       verificationExpiresAt: Date,
       revokedAt: Date,

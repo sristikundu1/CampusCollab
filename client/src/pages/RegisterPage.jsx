@@ -43,7 +43,11 @@ export function RegisterPage() {
       const { data } = await authApi.register(values);
       if (data.data.requiresEmailVerification) {
         navigate("/verify-email", {
-          state: { email: values.email, message: data.data.message },
+          state: {
+            email: values.email,
+            message: data.data.message,
+            expiresInSeconds: data.data.expiresInSeconds,
+          },
         });
       } else {
         navigate("/login", {

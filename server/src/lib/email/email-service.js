@@ -41,11 +41,16 @@ export function createEmailService(config, logger) {
   }
   return {
     configured: true,
-    sendVerification: (email, token) =>
+    sendVerification: (email, code, expiresInMinutes) =>
       send({
         to: email,
         subject: "Verify your CampusCollab university email",
-        text: `Verify your account: ${config.clientUrl}/verify-email?token=${encodeURIComponent(token)}`,
+        text: [
+          `Your CampusCollab verification code is: ${code}`,
+          "",
+          `This code expires in ${expiresInMinutes} minutes.`,
+          "If you did not create a CampusCollab account, ignore this email.",
+        ].join("\n"),
       }),
     sendPasswordReset: (email, token) =>
       send({

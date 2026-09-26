@@ -340,7 +340,7 @@ Table abbreviations: **Req** = required, **Opt** = optional, **Sys** = System-co
 | `email` | String | Req | Normalized university email; field/application encryption considered | User via workflow/Sys | Critical |
 | `status` | String | Req, `PENDING` | `PENDING`, `VERIFIED`, `EXPIRED`, `REVOKED`, `REPLACED` | Sys/Admin revoke | Critical |
 | `isActive` | Boolean | Req, `true` for pending/current | At most one active per user provisionally | Sys | Yes |
-| `verificationMethod` | String | Opt | `EMAIL_LINK`; required when verified | Sys | Yes |
+| `verificationMethod` | String | Opt | `EMAIL_CODE` (current) or legacy `EMAIL_LINK`; required when verified | Sys | Yes |
 | `verifiedAt` | Date | Opt | Required when verified | Sys | Yes |
 | `verificationExpiresAt` | Date | Opt | Provisional verifiedAt + 12 months | Sys | Yes |
 | `revokedAt` | Date | Opt | Required when revoked | Sys/Admin | Yes |

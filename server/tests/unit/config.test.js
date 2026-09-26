@@ -65,7 +65,7 @@ test("configuration rejects a missing or placeholder MONGODB_URI", () => {
   );
 });
 
-test("optional email placeholders do not block local development", () => {
+test("email placeholders are ignored only in the test environment", () => {
   const config = parseEnvironment({
     ...valid,
     SMTP_HOST: "your_smtp_host_here",
@@ -88,7 +88,11 @@ test("production configuration requires HTTPS origins", () => {
       NODE_ENV: "production",
       CLIENT_URL: "https://app.example.com",
       API_URL: "https://api.example.com",
-      REQUIRE_EMAIL_VERIFICATION: "false",
+      REQUIRE_EMAIL_VERIFICATION: "true",
+      SMTP_HOST: "smtp.example.com",
+      SMTP_USER: "smtp-user",
+      SMTP_PASSWORD: "smtp-password",
+      EMAIL_FROM: "noreply@example.com",
     }),
   );
   assert.throws(
@@ -100,6 +104,20 @@ test("production configuration requires HTTPS origins", () => {
         API_URL: "https://api.example.com",
         REQUIRE_EMAIL_VERIFICATION: "true",
       }),
+    ConfigurationError,
+  );
+});
+
+test("non-test environments require email delivery configuration", () => {
+  assert.throws(
+    () => parseEnvironment({ ...valid, NODE_ENV: "development" }),
+    ConfigurationError,
+  );
+});
+
+test("email verification cannot be disabled", () => {
+  assert.throws(
+    () => parseEnvironment({ ...valid, REQUIRE_EMAIL_VERIFICATION: "false" }),
     ConfigurationError,
   );
 });

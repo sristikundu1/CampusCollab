@@ -105,9 +105,13 @@ const environmentSchema = z
       .default("campuscollab_session"),
     SESSION_TTL_DAYS: z.coerce.number().int().min(1).max(90).default(30),
     REQUIRE_EMAIL_VERIFICATION: z
-      .enum(["true", "false"])
+      .literal("true", {
+        errorMap: () => ({
+          message: "Email verification is mandatory and must be true",
+        }),
+      })
       .default("true")
-      .transform((value) => value === "true"),
+      .transform(() => true),
     SMTP_HOST: z.string().trim().optional(),
     SMTP_PORT: z.coerce.number().int().min(1).max(65535).default(587),
     SMTP_SECURE: z
@@ -129,20 +133,20 @@ const environmentSchema = z
           });
         }
       }
-      if (value.REQUIRE_EMAIL_VERIFICATION) {
-        for (const key of [
-          "SMTP_HOST",
-          "SMTP_USER",
-          "SMTP_PASSWORD",
-          "EMAIL_FROM",
-        ]) {
-          if (!value[key])
-            context.addIssue({
-              code: "custom",
-              path: [key],
-              message: `${key} is required when email verification is enabled`,
-            });
-        }
+    }
+    if (value.NODE_ENV !== "test") {
+      for (const key of [
+        "SMTP_HOST",
+        "SMTP_USER",
+        "SMTP_PASSWORD",
+        "EMAIL_FROM",
+      ]) {
+        if (!value[key])
+          context.addIssue({
+            code: "custom",
+            path: [key],
+            message: `${key} is required for mandatory email verification`,
+          });
       }
     }
   });

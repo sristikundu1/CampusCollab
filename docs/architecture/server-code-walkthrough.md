@@ -180,9 +180,9 @@ POST /auth/password/reset
 
 Related files:
 
-- `auth.validation.js` validates email, password, tokens, and request bodies.
+- `auth.validation.js` validates email, password, 6-digit verification codes, reset tokens, and request bodies.
 - `auth.controller.js` sets/clears the HTTP-only session cookie.
-- `auth.service.js` creates users and sessions and verifies credentials.
+- `auth.service.js` creates users and sessions, issues hashed short-lived verification challenges, and verifies credentials.
 - `auth.middleware.js` authenticates the session and checks CSRF tokens.
 - `user.model.js`, `session.model.js`, and `verification-challenge.model.js` define the main collections.
 

@@ -44,6 +44,12 @@ export function LoginPage() {
       );
     } catch (error) {
       const parsed = apiError(error);
+      if (parsed.code === "EMAIL_VERIFICATION_REQUIRED") {
+        navigate("/verify-email", {
+          state: { email: values.email, message: parsed.message },
+        });
+        return;
+      }
       setError("root", { message: parsed.message });
     } finally {
       setSubmitting(false);

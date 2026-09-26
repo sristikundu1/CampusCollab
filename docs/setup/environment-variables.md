@@ -4,11 +4,11 @@
 **Authentication decision:** opaque, revocable server-side sessions stored as hashed tokens; no JWT variables are used.  
 **Rule:** `.env.example` contains names and placeholders only. Create `.env` locally yourself and never commit it.
 
-During the current stabilization phase, `REQUIRE_EMAIL_VERIFICATION=false` permits accounts from active university domains to sign in without inbox verification. This is an explicit product limitation: a matching address domain does not prove mailbox ownership. Email verification and password recovery are deferred and must be reviewed before CampusCollab is opened to real university users.
+`REQUIRE_EMAIL_VERIFICATION=true` is mandatory. Registration sends a short-lived 6-digit code to the university inbox; an account cannot sign in until that code is verified. The server rejects non-test startup when verification is disabled or SMTP is incomplete.
 
 `MONGODB_DB_NAME` explicitly selects the application database. Use `CampusCollab`; without an explicit database selection, MongoDB drivers commonly fall back to `test`.
 
-> **Current runtime:** MongoDB, session, and CSRF values are required. Redis is not used by the current application. SMTP is optional while email verification remains disabled. Cloudinary is not used by the implemented application.
+> **Current runtime:** MongoDB, session, CSRF, and SMTP values are required. Redis and Cloudinary are not used by the implemented application.
 
 ## 1. Configuration classes
 

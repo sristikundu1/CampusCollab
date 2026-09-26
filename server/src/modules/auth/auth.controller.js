@@ -28,7 +28,7 @@ export function createAuthController({ config, authService }) {
       respond(
         response,
         request,
-        await authService.verifyEmail(request.validated.body.token),
+        await authService.verifyEmail(request.validated.body),
       ),
     login: async (request, response) => {
       const result = await authService.login(request.validated.body);

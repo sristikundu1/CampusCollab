@@ -14,7 +14,8 @@ The application is organized as a React single-page application and a modular Ex
 - Profile onboarding and profile-completion tracking
 - Academic identity, headline, bio, links, skills, and availability
 - Portfolio entries and public student profiles
-- Password recovery and email-verification flows, ready for SMTP configuration
+- Mandatory university-email verification with short-lived 6-digit codes
+- Password recovery through email
 
 ### Gig marketplace
 
@@ -55,7 +56,7 @@ The application is organized as a React single-page application and a modular Ex
 | Backend | Node.js 22+, Express 5 |
 | Database | MongoDB, Mongoose |
 | Authentication | Opaque server-side sessions, HTTP-only cookies, CSRF tokens |
-| Email | Nodemailer/SMTP (optional in the current development configuration) |
+| Email | Nodemailer/SMTP (required outside automated tests) |
 | Testing | Node test runner, Vitest, Testing Library, jsdom |
 | Deployment | Separate Vercel projects for `client/` and `server/` |
 
@@ -82,7 +83,7 @@ flowchart LR
     PROFILE --> DB
     GIG --> DB
     PROJECT --> DB
-    AUTH -. optional email .-> SMTP[SMTP provider]
+    AUTH --> SMTP[SMTP provider]
 ```
 
 The frontend never receives database, session, or SMTP secrets. It knows only the public API base URL. The backend validates its environment at startup, establishes the database connection, then starts accepting HTTP requests.
@@ -184,6 +185,10 @@ Edit `server/.env` and replace these required placeholders:
 MONGODB_URI=mongodb+srv://YOUR_USER:YOUR_URL_ENCODED_PASSWORD@YOUR_CLUSTER/YOUR_DATABASE?retryWrites=true&w=majority
 SESSION_SECRET=YOUR_RANDOM_SESSION_SECRET_OF_AT_LEAST_32_CHARACTERS
 CSRF_SECRET=YOUR_DIFFERENT_RANDOM_CSRF_SECRET_OF_AT_LEAST_32_CHARACTERS
+SMTP_HOST=YOUR_SMTP_HOST
+SMTP_USER=YOUR_SMTP_USERNAME
+SMTP_PASSWORD=YOUR_SMTP_PASSWORD_OR_API_KEY
+EMAIL_FROM=YOUR_VERIFIED_SENDER_ADDRESS
 ```
 
 You can generate independent local secrets with Node.js:
@@ -202,7 +207,9 @@ NODE_ENV=development
 PORT=5000
 API_URL=http://localhost:5000
 CLIENT_URL=http://localhost:5173
-REQUIRE_EMAIL_VERIFICATION=false
+REQUIRE_EMAIL_VERIFICATION=true
+SMTP_PORT=587
+SMTP_SECURE=false
 ```
 
 ```env
@@ -265,6 +272,10 @@ Open <http://localhost:5173>.
 | `MONGODB_URI` | Authenticated MongoDB connection string |
 | `SESSION_SECRET` | Secret used by the server-side session system; minimum 32 characters |
 | `CSRF_SECRET` | Independent CSRF integrity secret; minimum 32 characters |
+| `SMTP_HOST` | SMTP provider hostname |
+| `SMTP_USER` | SMTP username or account identifier |
+| `SMTP_PASSWORD` | SMTP password or provider-issued key |
+| `EMAIL_FROM` | Verified sender email address |
 
 ### Important backend settings
 
@@ -276,9 +287,11 @@ Open <http://localhost:5173>.
 | `MONGODB_DNS_SERVERS` | empty | Optional comma-separated DNS resolver IPs for Atlas SRV troubleshooting |
 | `CLIENT_URL` | `http://localhost:5173` | Exact frontend origin allowed by CORS |
 | `API_URL` | `http://localhost:5000` | Public backend origin |
-| `REQUIRE_EMAIL_VERIFICATION` | `false` | Require inbox verification before login |
+| `REQUIRE_EMAIL_VERIFICATION` | `true` | Mandatory; cannot be disabled |
+| `SMTP_PORT` | `587` | Provider SMTP port |
+| `SMTP_SECURE` | `false` | Use `true` for implicit TLS, normally port 465 |
 
-SMTP settings are needed only when email delivery is enabled. Cloudinary variables are reserved for later upload work and are not used by the current application. See [the environment guide](docs/setup/environment-variables.md) for the complete reference.
+SMTP settings are required in local development and production because registration requires a 6-digit inbox verification code. Cloudinary variables are reserved for later upload work and are not used by the current application. See [the environment guide](docs/setup/environment-variables.md) for the complete reference.
 
 ## Main user flows
 
@@ -413,7 +426,7 @@ Production URLs must use HTTPS. If the backend domain changes, update the proxy 
 - Rotate any secret immediately if it is accidentally shared or committed.
 - Keep `CLIENT_URL` exact; do not replace credentialed CORS with a wildcard.
 - Use HTTPS and secure cookies in production.
-- Treat the current email-verification-disabled mode as development-only.
+- Keep university-email verification enabled in every non-test environment.
 
 ## Contributing
 

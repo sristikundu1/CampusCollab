@@ -45,10 +45,15 @@ export const loginRequest = z.object({
     })
     .strict(),
 });
-export const tokenRequest = z.object({
+export const verifyEmailRequest = z.object({
   params: empty,
   query: empty,
-  body: z.object({ token: z.string().min(32).max(512) }).strict(),
+  body: z
+    .object({
+      email,
+      code: z.string().regex(/^\d{6}$/, "Enter the 6-digit verification code"),
+    })
+    .strict(),
 });
 export const emailRequest = z.object({
   params: empty,

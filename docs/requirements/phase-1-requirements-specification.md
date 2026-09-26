@@ -249,7 +249,7 @@ Alternate/error outcomes include unsupported university, duplicate email, weak p
 
 ### 3.2 University email verification
 
-1. User opens the latest unexpired verification link.
+1. User enters the latest unexpired 6-digit verification code sent to the university inbox.
 2. System validates token authenticity, intended account, expiry, and prior use.
 3. System marks the university email verified and records the verification event.
 4. Earlier verification tokens become unusable.

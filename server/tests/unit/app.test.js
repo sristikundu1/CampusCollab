@@ -119,6 +119,46 @@ test("registration rejects invalid input before database access", async () => {
   });
 });
 
+test("email verification accepts only an email and six-digit code", async () => {
+  const calls = [];
+  const fakeAuthService = {
+    async verifyEmail(input) {
+      calls.push(input);
+      return { message: "Your university email has been verified." };
+    },
+  };
+  await withServer(
+    { ready: true, status: "CONNECTED" },
+    async (base) => {
+      const invalid = await fetch(`${base}/api/v1/auth/verify-email`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          email: "student@example.edu",
+          code: "12ab",
+        }),
+      });
+      assert.equal(invalid.status, 422);
+      assert.equal(calls.length, 0);
+
+      const validResponse = await fetch(`${base}/api/v1/auth/verify-email`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          email: "student@example.edu",
+          code: "123456",
+        }),
+      });
+      assert.equal(validResponse.status, 200);
+      assert.deepEqual(calls[0], {
+        email: "student@example.edu",
+        code: "123456",
+      });
+    },
+    { authService: fakeAuthService },
+  );
+});
+
 test("login sets an opaque HttpOnly cookie and logout enforces CSRF", async () => {
   const rawToken = "opaque-test-session-token";
   const fakeAuthService = {
