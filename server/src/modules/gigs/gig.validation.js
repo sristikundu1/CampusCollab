@@ -72,7 +72,11 @@ const gigFields = {
   visibility: z.enum(["PLATFORM", "UNIVERSITY"]).default("PLATFORM"),
   budget: budget.optional(),
   deadlineAt: z.string().datetime({ offset: true }).nullable().optional(),
-  capacity: z.number().int().min(1).max(100).default(1),
+  capacity: z
+    .number()
+    .int("Worker limit must be a whole number.")
+    .min(1, "Worker limit must be at least 1.")
+    .max(100, "Worker limit cannot exceed 100."),
 };
 const createBody = z.object(gigFields).strict();
 const updateBody = z

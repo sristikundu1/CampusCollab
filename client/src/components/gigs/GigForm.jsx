@@ -18,7 +18,11 @@ const schema = z
     workMode: z.enum(["REMOTE", "HYBRID", "ONSITE"]),
     locationText: z.string().trim().max(160),
     visibility: z.enum(["PLATFORM", "UNIVERSITY"]),
-    capacity: z.coerce.number().int().min(1).max(100),
+    capacity: z.coerce
+      .number()
+      .int("Worker limit must be a whole number")
+      .min(1, "Worker limit must be at least 1")
+      .max(100, "Worker limit cannot exceed 100"),
     deadlineAt: z.string(),
     budgetType: z.enum(["UNPAID", "FIXED", "RANGE"]),
     minAmount: z.string(),
@@ -162,8 +166,16 @@ export function GigForm({
           </FormField>
         </div>
         <div>
-          <FormField label="Capacity" error={errors.capacity?.message}>
-            <input className="field" type="number" {...register("capacity")} />
+          <FormField label="Worker Limit" error={errors.capacity?.message}>
+            <input
+              className="field"
+              type="number"
+              min="1"
+              max="100"
+              step="1"
+              required
+              {...register("capacity")}
+            />
           </FormField>
         </div>
         <div className="sm:col-span-2">

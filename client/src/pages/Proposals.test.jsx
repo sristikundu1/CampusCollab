@@ -196,6 +196,33 @@ describe("Proposal workflow", () => {
       screen.queryByRole("button", { name: "Apply to this Gig" }),
     ).not.toBeInTheDocument();
   });
+  it("explains that applications stop when the worker limit is full", async () => {
+    mocks.gigGet.mockImplementation(() =>
+      response({
+        gig: {
+          ...gig,
+          capacity: 1,
+          acceptedCount: 1,
+          acceptingProposals: false,
+          status: "ASSIGNED",
+        },
+      }),
+    );
+    renderAt(
+      <Routes>
+        <Route path="/gigs/:gigId" element={<GigDetailsPage />} />
+      </Routes>,
+      `/gigs/${GIG}`,
+    );
+    expect(
+      await screen.findByText(
+        "No more workers can be accepted for this gig.",
+      ),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "Apply to this Gig" }),
+    ).not.toBeInTheDocument();
+  });
   it("keeps gig details usable when the proposal-status request fails", async () => {
     mocks.mine.mockRejectedValueOnce(new Error("Could not check applications"));
     renderAt(

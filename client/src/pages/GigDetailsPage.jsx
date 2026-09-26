@@ -231,6 +231,7 @@ export function GigDetailsPage() {
     ["DRAFT", "ARCHIVED"].includes(gig.status) &&
     gig.proposalCount === 0 &&
     gig.acceptedCount === 0;
+  const atCapacity = gig.acceptedCount >= gig.capacity;
   return (
     <MarketplaceLayout>
       <div className="mx-auto max-w-6xl">
@@ -421,9 +422,9 @@ export function GigDetailsPage() {
               <div className="flex gap-3">
                 <Users className="mt-0.5 text-brand-600" size={18} />
                 <div>
-                  <dt className="text-slate-500">Team capacity</dt>
+                  <dt className="text-slate-500">Worker limit</dt>
                   <dd className="mt-1 font-bold text-slate-900">
-                    {gig.acceptedCount} / {gig.capacity} places filled
+                    {gig.acceptedCount} / {gig.capacity} workers accepted
                   </dd>
                 </div>
               </div>
@@ -473,6 +474,13 @@ export function GigDetailsPage() {
                   <FileText size={17} />
                   View your proposal
                 </Link>
+              </div>
+            ) : atCapacity ? (
+              <div
+                className="mt-6 rounded-xl bg-amber-50 p-4 text-sm font-semibold text-amber-800"
+                role="status"
+              >
+                No more workers can be accepted for this gig.
               </div>
             ) : gig.status === "PUBLISHED" &&
               gig.acceptingProposals &&

@@ -14,7 +14,10 @@ import {
   joinListRequest,
 } from "../../src/modules/participation/participation.validation.js";
 import { createProfileService } from "../../src/modules/profiles/profile.service.js";
-import { listMineRequest } from "../../src/modules/gigs/gig.validation.js";
+import {
+  createGigRequest,
+  listMineRequest,
+} from "../../src/modules/gigs/gig.validation.js";
 
 test("validation middleware parses params, query, and body into request.validated", () => {
   const middleware = validateRequest(
@@ -90,6 +93,30 @@ test("owned gig views accept simplified filters without changing lifecycle state
     assert.equal(parse(view).success, true);
   assert.equal(parse("PENDING").success, false);
   assert.equal(parse("COMPLETED").success, false);
+});
+
+test("gig worker limit requires an explicit positive whole number", () => {
+  const body = {
+    title: "Build a campus collaboration portal",
+    description:
+      "Create and test a responsive collaboration portal for students.",
+    category: "Web Development",
+    skillRequirements: [],
+    workMode: "REMOTE",
+    visibility: "PLATFORM",
+    budget: { type: "UNPAID" },
+  };
+  const parses = (capacity) =>
+    createGigRequest.safeParse({
+      params: {},
+      query: {},
+      body: { ...body, ...(capacity === undefined ? {} : { capacity }) },
+    }).success;
+
+  assert.equal(parses(1), true);
+  assert.equal(parses(5), true);
+  for (const value of [undefined, null, 0, -1, "5", "abc", 1.5])
+    assert.equal(parses(value), false, `capacity ${String(value)} must fail`);
 });
 
 test("portfolio updates validate dates after merging with stored values", async () => {
