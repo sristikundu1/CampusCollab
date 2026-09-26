@@ -7,9 +7,15 @@ import { ToastContext } from "../context/toast-context.js";
 import { ProjectDetailsPage } from "./ProjectDetailsPage.jsx";
 import { ProjectsPage } from "./ProjectsPage.jsx";
 import { ParticipationInboxPage } from "./ParticipationInboxPage.jsx";
+import { ProjectFormPage } from "./ProjectFormPage.jsx";
 const mocks = vi.hoisted(() => ({
   list: vi.fn(),
   get: vi.fn(),
+  create: vi.fn(),
+  update: vi.fn(),
+  addOpening: vi.fn(),
+  updateOpening: vi.fn(),
+  skillList: vi.fn(),
   join: vi.fn(),
   myJoins: vi.fn(),
   myInvites: vi.fn(),
@@ -19,7 +25,15 @@ const mocks = vi.hoisted(() => ({
   confirm: vi.fn(),
 }));
 vi.mock("../services/api.js", () => ({
-  projectApi: { list: mocks.list, get: mocks.get },
+  projectApi: {
+    list: mocks.list,
+    get: mocks.get,
+    create: mocks.create,
+    update: mocks.update,
+    addOpening: mocks.addOpening,
+    updateOpening: mocks.updateOpening,
+  },
+  skillApi: { list: mocks.skillList },
   participationApi: {
     requestJoin: mocks.join,
     myJoins: mocks.myJoins,
@@ -90,6 +104,17 @@ function show(ui, path) {
 beforeEach(() => {
   mocks.list.mockImplementation(() => response({ projects: [project] }));
   mocks.get.mockImplementation(() => response({ project }));
+  mocks.create.mockImplementation(() => response({ project }));
+  mocks.update.mockImplementation(() => response({ project }));
+  mocks.addOpening.mockImplementation(() =>
+    response({ opening: project.openings[0] }),
+  );
+  mocks.updateOpening.mockImplementation(() =>
+    response({ opening: project.openings[0] }),
+  );
+  mocks.skillList.mockImplementation(() =>
+    response({ skills: project.skills }),
+  );
   mocks.join.mockImplementation(() =>
     response({ joinRequest: { id: REQUEST, status: "PENDING" } }),
   );
@@ -129,6 +154,113 @@ describe("Projects collaboration workflow", () => {
       "bg-white",
       "text-indigo-800",
     );
+  });
+  it("shows useful project discovery empty and error states", async () => {
+    mocks.list.mockImplementationOnce(() => response({ projects: [] }));
+    const first = show(<ProjectsPage />, "/projects");
+    expect(await screen.findByText("No matching projects")).toBeInTheDocument();
+    first.unmount();
+    mocks.list.mockRejectedValueOnce(
+      new Error("Project discovery unavailable"),
+    );
+    show(<ProjectsPage />, "/projects");
+    expect(
+      await screen.findByText("Project discovery unavailable"),
+    ).toBeInTheDocument();
+  });
+  it("creates a project draft from validated form values", async () => {
+    const user = userEvent.setup();
+    show(
+      <Routes>
+        <Route path="/projects/new" element={<ProjectFormPage />} />
+      </Routes>,
+      "/projects/new",
+    );
+    await screen.findByRole("heading", { name: "Create a project" });
+    await user.click(screen.getByRole("button", { name: "Save project" }));
+    expect(mocks.create).not.toHaveBeenCalled();
+    await user.type(
+      screen.getByLabelText("Project title"),
+      "Accessible campus research portal",
+    );
+    await user.type(
+      screen.getByLabelText("Description"),
+      "A carefully scoped project for sharing accessible student research.",
+    );
+    await user.type(screen.getByLabelText("Role name"), "Frontend contributor");
+    await user.type(
+      screen.getByLabelText("Role description"),
+      "Build and test the accessible project interface.",
+    );
+    await user.click(screen.getByRole("button", { name: "Save project" }));
+    await waitFor(() =>
+      expect(mocks.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          title: "Accessible campus research portal",
+          expectedStartAt: null,
+          expectedEndAt: null,
+          openings: [expect.objectContaining({ capacity: 1 })],
+        }),
+      ),
+    );
+  });
+  it("loads and updates an owned project while preserving server ownership", async () => {
+    const user = userEvent.setup();
+    mocks.get.mockImplementationOnce(() =>
+      response({ project: { ...project, isOwner: true } }),
+    );
+    show(
+      <Routes>
+        <Route path="/projects/:projectId/edit" element={<ProjectFormPage />} />
+      </Routes>,
+      `/projects/${ID}/edit`,
+    );
+    const title = await screen.findByLabelText("Project title");
+    await user.clear(title);
+    await user.type(title, "Updated accessible campus portal");
+    await user.click(screen.getByRole("button", { name: "Save project" }));
+    await waitFor(() =>
+      expect(mocks.update).toHaveBeenCalledWith(
+        ID,
+        expect.objectContaining({
+          title: "Updated accessible campus portal",
+          expectedStartAt: null,
+          expectedEndAt: null,
+        }),
+      ),
+    );
+    expect(mocks.updateOpening).toHaveBeenCalledWith(
+      ID,
+      OPEN,
+      expect.objectContaining({ capacity: 2 }),
+    );
+  });
+  it("fails closed when an edit form cannot load", async () => {
+    mocks.get.mockRejectedValueOnce(new Error("Project unavailable"));
+    show(
+      <Routes>
+        <Route path="/projects/:projectId/edit" element={<ProjectFormPage />} />
+      </Routes>,
+      `/projects/${ID}/edit`,
+    );
+    expect(
+      await screen.findByRole("heading", { name: "Project form unavailable" }),
+    ).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Save project" })).toBeNull();
+  });
+  it("shows owners a direct edit action on project details", async () => {
+    mocks.get.mockImplementationOnce(() =>
+      response({ project: { ...project, isOwner: true } }),
+    );
+    show(
+      <Routes>
+        <Route path="/projects/:projectId" element={<ProjectDetailsPage />} />
+      </Routes>,
+      `/projects/${ID}`,
+    );
+    expect(
+      await screen.findByRole("link", { name: "Edit project" }),
+    ).toHaveAttribute("href", `/dashboard/projects/${ID}/edit`);
   });
   it("lets an authenticated student select a role and send a join request", async () => {
     const user = userEvent.setup();

@@ -206,12 +206,20 @@ export function ProjectDetailsPage() {
                 </div>
               </dl>
               {project.isOwner && (
-                <Link
-                  className="btn-primary mt-6 w-full"
-                  to={`/dashboard/projects/${project.id}/manage`}
-                >
-                  Manage project
-                </Link>
+                <div className="mt-6 space-y-3">
+                  <Link
+                    className="btn-primary w-full"
+                    to={`/dashboard/projects/${project.id}/edit`}
+                  >
+                    Edit project
+                  </Link>
+                  <Link
+                    className="btn-secondary w-full"
+                    to={`/dashboard/projects/${project.id}/manage`}
+                  >
+                    Manage project
+                  </Link>
+                </div>
               )}
             </section>
             {selected && !project.isOwner && (

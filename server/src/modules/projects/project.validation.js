@@ -14,6 +14,7 @@ const optionalText = (max) =>
     .max(max)
     .transform((v) => v || undefined)
     .optional();
+const optionalDate = z.union([z.coerce.date(), z.null()]).optional();
 const opening = z
   .object({
     roleName: z.string().trim().min(2).max(100),
@@ -36,13 +37,18 @@ const projectFields = {
     "PERSONAL",
     "OTHER",
   ]),
-  requiredSkillIds: ids.default([]),
-  visibility: z.enum(["PLATFORM", "UNIVERSITY", "PRIVATE"]).default("PLATFORM"),
-  expectedStartAt: z.coerce.date().optional(),
-  expectedEndAt: z.coerce.date().optional(),
+  requiredSkillIds: ids,
+  visibility: z.enum(["PLATFORM", "UNIVERSITY", "PRIVATE"]),
+  expectedStartAt: optionalDate,
+  expectedEndAt: optionalDate,
 };
 const project = z
-  .object({ ...projectFields, openings: z.array(opening).max(20).default([]) })
+  .object({
+    ...projectFields,
+    requiredSkillIds: projectFields.requiredSkillIds.default([]),
+    visibility: projectFields.visibility.default("PLATFORM"),
+    openings: z.array(opening).max(20).default([]),
+  })
   .strict()
   .superRefine((v, c) => {
     if (
@@ -57,10 +63,28 @@ const project = z
       });
   });
 const projectUpdate = z
-  .object(projectFields)
-  .partial()
+  .object(
+    Object.fromEntries(
+      Object.entries(projectFields).map(([key, schema]) => [
+        key,
+        schema.optional(),
+      ]),
+    ),
+  )
   .strict()
-  .refine((v) => Object.keys(v).length > 0, "At least one field is required");
+  .refine((v) => Object.keys(v).length > 0, "At least one field is required")
+  .superRefine((v, c) => {
+    if (
+      v.expectedStartAt &&
+      v.expectedEndAt &&
+      v.expectedEndAt <= v.expectedStartAt
+    )
+      c.addIssue({
+        code: "custom",
+        path: ["expectedEndAt"],
+        message: "End date must be after start date",
+      });
+  });
 const projectParams = z.object({ projectId: id }).strict();
 const openingParams = z.object({ projectId: id, openingId: id }).strict();
 const list = z

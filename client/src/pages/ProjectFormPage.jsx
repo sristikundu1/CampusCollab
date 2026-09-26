@@ -1,6 +1,6 @@
 import { Check, Plus, Save, Trash2 } from "lucide-react";
 import { useEffect, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { Link, useNavigate, useParams } from "react-router-dom";
 import { useToast } from "../context/toast-context.js";
 import { AppShell } from "../layouts/AppShell.jsx";
 import { apiError, projectApi, skillApi } from "../services/api.js";
@@ -26,13 +26,25 @@ export function ProjectFormPage() {
       openings: [blankOpening()],
     }),
     [skills, setSkills] = useState([]),
+    [loading, setLoading] = useState(true),
+    [loadError, setLoadError] = useState(""),
+    [reloadKey, setReloadKey] = useState(0),
     [busy, setBusy] = useState(false),
     [error, setError] = useState("");
   useEffect(() => {
-    void skillApi.list().then((r) => setSkills(r.data.data.skills));
-    if (edit)
-      void projectApi.get(projectId).then(({ data }) => {
-        const p = data.data.project;
+    let active = true;
+    const load = async () => {
+      setLoading(true);
+      setLoadError("");
+      try {
+        const [skillResponse, projectResponse] = await Promise.all([
+          skillApi.list(),
+          edit ? projectApi.get(projectId) : Promise.resolve(null),
+        ]);
+        if (!active) return;
+        setSkills(skillResponse.data.data.skills);
+        if (!projectResponse) return;
+        const p = projectResponse.data.data.project;
         setForm({
           title: p.title,
           description: p.description,
@@ -49,8 +61,17 @@ export function ProjectFormPage() {
             requiredSkillIds: o.skills.map((s) => s.id),
           })),
         });
-      });
-  }, [edit, projectId]);
+      } catch (reason) {
+        if (active) setLoadError(apiError(reason).message);
+      } finally {
+        if (active) setLoading(false);
+      }
+    };
+    void load();
+    return () => {
+      active = false;
+    };
+  }, [edit, projectId, reloadKey]);
   const set = (key, value) => setForm((f) => ({ ...f, [key]: value }));
   const opening = (i, key, value) =>
     setForm((f) => ({
@@ -72,12 +93,12 @@ export function ProjectFormPage() {
         projectType: form.projectType,
         visibility: form.visibility,
         requiredSkillIds: form.requiredSkillIds,
-        ...(form.expectedStartAt
-          ? { expectedStartAt: new Date(form.expectedStartAt).toISOString() }
-          : {}),
-        ...(form.expectedEndAt
-          ? { expectedEndAt: new Date(form.expectedEndAt).toISOString() }
-          : {}),
+        expectedStartAt: form.expectedStartAt
+          ? new Date(form.expectedStartAt).toISOString()
+          : null,
+        expectedEndAt: form.expectedEndAt
+          ? new Date(form.expectedEndAt).toISOString()
+          : null,
       };
       let id = projectId;
       if (edit) {
@@ -113,6 +134,34 @@ export function ProjectFormPage() {
       setBusy(false);
     }
   };
+  if (loading)
+    return (
+      <AppShell>
+        <div className="mx-auto h-96 max-w-4xl animate-pulse rounded-3xl bg-slate-200" />
+      </AppShell>
+    );
+  if (loadError)
+    return (
+      <AppShell>
+        <div className="surface mx-auto max-w-xl p-8 text-center">
+          <h1 className="text-xl font-black">Project form unavailable</h1>
+          <p className="mt-2 text-slate-600" role="alert">
+            {loadError}
+          </p>
+          <div className="mt-6 flex flex-wrap justify-center gap-3">
+            <button
+              className="btn-primary"
+              onClick={() => setReloadKey((value) => value + 1)}
+            >
+              Try again
+            </button>
+            <Link className="btn-secondary" to="/dashboard/projects">
+              Back to projects
+            </Link>
+          </div>
+        </div>
+      </AppShell>
+    );
   return (
     <AppShell>
       <div className="mx-auto max-w-4xl">
@@ -240,6 +289,7 @@ export function ProjectFormPage() {
                       required
                       min="1"
                       max="100"
+                      step="1"
                       type="number"
                       className="field mt-2"
                       value={o.capacity}

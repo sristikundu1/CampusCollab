@@ -2,6 +2,7 @@ import {
   AuthorizationError,
   ConflictError,
   NotFoundError,
+  RequestValidationError,
 } from "../../errors/application-error.js";
 import { createCursorCodec } from "../../lib/pagination/cursor.js";
 import { withTransaction } from "../../lib/mongo/transaction.js";
@@ -418,15 +419,19 @@ export function createProjectService({
         "Only draft or recruiting projects can be edited.",
       );
     await validateSkills(input.requiredSkillIds);
-    if (
-      input.expectedStartAt &&
-      input.expectedEndAt &&
-      input.expectedEndAt <= input.expectedStartAt
-    )
-      throw new ConflictError(
-        "INVALID_DATES",
-        "End date must be after start date.",
-      );
+    const expectedStartAt = Object.hasOwn(input, "expectedStartAt")
+      ? input.expectedStartAt
+      : project.expectedStartAt;
+    const expectedEndAt = Object.hasOwn(input, "expectedEndAt")
+      ? input.expectedEndAt
+      : project.expectedEndAt;
+    if (expectedStartAt && expectedEndAt && expectedEndAt <= expectedStartAt)
+      throw new RequestValidationError([
+        {
+          path: "body.expectedEndAt",
+          message: "End date must be after start date.",
+        },
+      ]);
     Object.assign(project, input);
     if (input.visibility)
       project.universityId =

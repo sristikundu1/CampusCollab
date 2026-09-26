@@ -238,6 +238,16 @@ test("project discovery is public while creation uses authenticated session owne
       (
         await fetch(`${base}/api/v1/projects`, {
           method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify(input),
+        })
+      ).status,
+      401,
+    );
+    assert.equal(
+      (
+        await fetch(`${base}/api/v1/projects`, {
+          method: "POST",
           headers: headers("owner", true),
           body: JSON.stringify(input),
         })
@@ -245,6 +255,24 @@ test("project discovery is public while creation uses authenticated session owne
       201,
     );
     assert.deepEqual(calls.at(-1).slice(0, 2), ["create", OWNER]);
+  }));
+test("project creation rejects invalid opening capacity values", () =>
+  run(async (base, calls) => {
+    for (const capacity of [null, 0, -1, 1.5, "2", "invalid"])
+      assert.equal(
+        (
+          await fetch(`${base}/api/v1/projects`, {
+            method: "POST",
+            headers: headers("owner", true),
+            body: JSON.stringify({
+              ...input,
+              openings: [{ ...input.openings[0], capacity }],
+            }),
+          })
+        ).status,
+        422,
+      );
+    assert.equal(calls.length, 0);
   }));
 test("project create rejects owner, role, capability, and lifecycle spoofing", () =>
   run(async (base, calls) => {
@@ -269,6 +297,16 @@ test("project create rejects owner, role, capability, and lifecycle spoofing", (
   }));
 test("only the authenticated owner can edit or publish a project", () =>
   run(async (base, calls) => {
+    assert.equal(
+      (
+        await fetch(`${base}/api/v1/projects/${PROJECT}`, {
+          method: "PATCH",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ title: "Unauthenticated project update" }),
+        })
+      ).status,
+      401,
+    );
     assert.equal(
       (
         await fetch(`${base}/api/v1/projects/${PROJECT}`, {
@@ -300,6 +338,33 @@ test("only the authenticated owner can edit or publish a project", () =>
       200,
     );
     assert.ok(calls.some((c) => c[0] === "publish" && c[1] === OWNER));
+  }));
+test("project details and updates validate identifiers, fields, and dates", () =>
+  run(async (base, calls) => {
+    assert.equal(
+      (await fetch(`${base}/api/v1/projects/${PROJECT}`)).status,
+      200,
+    );
+    for (const body of [
+      {},
+      { ownerId: OTHER },
+      { status: "ACTIVE" },
+      {
+        expectedStartAt: "2027-06-01T00:00:00.000Z",
+        expectedEndAt: "2027-05-01T00:00:00.000Z",
+      },
+    ])
+      assert.equal(
+        (
+          await fetch(`${base}/api/v1/projects/${PROJECT}`, {
+            method: "PATCH",
+            headers: headers("owner", true),
+            body: JSON.stringify(body),
+          })
+        ).status,
+        422,
+      );
+    assert.equal(calls.filter((call) => call[0] === "update").length, 0);
   }));
 test("join requests ignore applicant identity from the body and require idempotency", () =>
   run(async (base, calls) => {
