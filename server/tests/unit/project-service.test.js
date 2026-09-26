@@ -6,6 +6,7 @@ const OWNER = "aaaaaaaaaaaaaaaaaaaaaaaa";
 const OTHER = "bbbbbbbbbbbbbbbbbbbbbbbb";
 const PROJECT = "cccccccccccccccccccccccc";
 const UNIVERSITY = "dddddddddddddddddddddddd";
+const OPENING = "eeeeeeeeeeeeeeeeeeeeeeee";
 const config = {
   csrfSecret: "test-csrf-secret-with-more-than-thirty-two-characters",
   requireEmailVerification: true,
@@ -163,4 +164,71 @@ test("project editing enforces ownership and validates dates against stored valu
   assert.equal(saves, 1);
   assert.equal(project.expectedStartAt, null);
   assert.equal(updated.title, "Updated accessible research portal");
+});
+
+test("project details expose only the viewer collaboration state and dynamic capacity", async () => {
+  const project = {
+    _id: PROJECT,
+    ownerId: OWNER,
+    ownerSnapshot: { displayName: "Project Owner", universityId: UNIVERSITY },
+    title: "Accessible campus research portal",
+    description:
+      "A carefully scoped project for sharing accessible student research.",
+    projectType: "RESEARCH",
+    requiredSkillIds: [],
+    visibility: "PLATFORM",
+    openings: [
+      {
+        _id: OPENING,
+        roleName: "Frontend contributor",
+        description: "Build accessible interfaces.",
+        requiredSkillIds: [],
+        capacity: 2,
+        filledCount: 0,
+        status: "OPEN",
+      },
+    ],
+    acceptingMembers: true,
+    status: "RECRUITING",
+    moderationStatus: "VISIBLE",
+    createdAt: new Date(),
+    updatedAt: new Date(),
+    version: 0,
+  };
+  const ProjectModel = { findById: () => query(project) };
+  const service = createProjectService(
+    dependencies(ProjectModel, {
+      MembershipModel: {
+        findOne: () => query(null),
+        find: () => query([]),
+      },
+      JoinModel: {
+        find: () =>
+          query([
+            {
+              openingId: OPENING,
+              status: "PENDING",
+              submittedAt: new Date(),
+            },
+          ]),
+      },
+      InvitationModel: {
+        find: () =>
+          query([
+            {
+              openingId: OPENING,
+              status: "PENDING",
+              expiresAt: new Date(Date.now() + 60_000),
+            },
+          ]),
+      },
+    }),
+  );
+
+  const details = await service.get(PROJECT, OTHER);
+
+  assert.deepEqual(details.capacity, { filled: 0, total: 2 });
+  assert.deepEqual(details.collaboration.pendingJoinOpeningIds, [OPENING]);
+  assert.equal(details.collaboration.pendingInvitations[0].openingId, OPENING);
+  assert.equal(details.members.length, 1);
 });

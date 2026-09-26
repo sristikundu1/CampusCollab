@@ -614,6 +614,19 @@ export function createParticipationService({
       )
         throw new ConflictError("ALREADY_A_MEMBER");
       const opening = requireOpening(project, source.openingId);
+      const activeOpeningMembers = await q(
+        MembershipModel.countDocuments({
+          projectId: project._id,
+          openingId: opening._id,
+          status: "ACTIVE",
+        }),
+        { session },
+      );
+      if (activeOpeningMembers !== opening.filledCount)
+        throw new ConflictError(
+          "MEMBERSHIP_COUNT_INCONSISTENT",
+          "Membership capacity is temporarily unavailable while this project is reconciled.",
+        );
       intake(project, opening);
       const updated = await ProjectModel.findOneAndUpdate(
         {

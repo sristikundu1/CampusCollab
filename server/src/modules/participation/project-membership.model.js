@@ -66,6 +66,10 @@ projectMembershipSchema.index(
   { name: "ix_memberships_project_status_joined" },
 );
 projectMembershipSchema.index(
+  { projectId: 1, openingId: 1, status: 1 },
+  { name: "ix_memberships_project_opening_status" },
+);
+projectMembershipSchema.index(
   { userId: 1, status: 1, joinedAt: -1, _id: -1 },
   { name: "ix_memberships_user_status_cursor" },
 );

@@ -108,16 +108,20 @@ function services(calls) {
       async recruitment() {
         return project;
       },
-      async addOpening() {
+      async addOpening(u, p, b) {
+        calls.push(["addOpening", String(u), p, b]);
         return project.openings[0];
       },
-      async updateOpening() {
+      async updateOpening(u, p, o, b) {
+        calls.push(["updateOpening", String(u), p, o, b]);
         return project.openings[0];
       },
-      async closeOpening() {
+      async closeOpening(u, p, o) {
+        calls.push(["closeOpening", String(u), p, o]);
         return project.openings[0];
       },
-      async reopenOpening() {
+      async reopenOpening(u, p, o) {
+        calls.push(["reopenOpening", String(u), p, o]);
         return project.openings[0];
       },
     },
@@ -407,6 +411,89 @@ test("join requests ignore applicant identity from the body and require idempote
       201,
     );
     assert.equal(calls.at(-1)[1], STUDENT);
+  }));
+test("opening management validates ownership-shaped fields and capacity", () =>
+  run(async (base, calls) => {
+    const createPath = `${base}/api/v1/projects/${PROJECT}/openings`;
+    assert.equal(
+      (
+        await fetch(createPath, {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify(input.openings[0]),
+        })
+      ).status,
+      401,
+    );
+    for (const body of [
+      { ...input.openings[0], capacity: 0 },
+      { ...input.openings[0], capacity: 1.5 },
+      { ...input.openings[0], capacity: 101 },
+      { ...input.openings[0], projectId: OTHER },
+      { ...input.openings[0], filledCount: 1 },
+      { ...input.openings[0], status: "OPEN" },
+    ])
+      assert.equal(
+        (
+          await fetch(createPath, {
+            method: "POST",
+            headers: headers("owner", true),
+            body: JSON.stringify(body),
+          })
+        ).status,
+        422,
+      );
+    assert.equal(
+      (
+        await fetch(createPath, {
+          method: "POST",
+          headers: headers("owner", true),
+          body: JSON.stringify(input.openings[0]),
+        })
+      ).status,
+      201,
+    );
+    assert.deepEqual(calls.at(-1).slice(0, 3), ["addOpening", OWNER, PROJECT]);
+  }));
+test("participation commands reject protected identity and status fields", () =>
+  run(async (base, calls) => {
+    const invitationPath = `${base}/api/v1/projects/${PROJECT}/openings/${OPENING}/invitations`;
+    for (const extra of [
+      { projectId: OTHER },
+      { inviterId: OTHER },
+      { status: "ACCEPTED" },
+      { recipientId: OTHER },
+    ])
+      assert.equal(
+        (
+          await fetch(invitationPath, {
+            method: "POST",
+            headers: headers("owner", true),
+            body: JSON.stringify({
+              inviteeId: STUDENT,
+              expiresInDays: 14,
+              ...extra,
+            }),
+          })
+        ).status,
+        422,
+      );
+    for (const extra of [
+      { status: "ACCEPTED" },
+      { applicantId: STUDENT },
+      { projectId: PROJECT },
+    ])
+      assert.equal(
+        (
+          await fetch(`${base}/api/v1/join-requests/${REQUEST}:accept`, {
+            method: "POST",
+            headers: headers("owner", true),
+            body: JSON.stringify(extra),
+          })
+        ).status,
+        422,
+      );
+    assert.equal(calls.length, 0);
   }));
 test("join acceptance and invitations use owner and invitee identities from sessions", () =>
   run(async (base, calls) => {

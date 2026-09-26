@@ -364,10 +364,31 @@ export function createProjectService({
     if (["DRAFT", "ARCHIVED"].includes(project.status) && !owner && !membership)
       throw new NotFoundError();
     const base = (await view([project], viewerId))[0];
-    const memberships = await q(
-      MembershipModel.find({ projectId, status: "ACTIVE" }),
-      { lean: true },
-    );
+    const [memberships, viewerJoins, viewerInvitations] = await Promise.all([
+      q(MembershipModel.find({ projectId, status: "ACTIVE" }), {
+        lean: true,
+      }),
+      viewerId && !owner && !membership
+        ? q(
+            JoinModel.find({
+              projectId,
+              applicantId: viewerId,
+              status: "PENDING",
+            }).select("openingId status submittedAt"),
+            { lean: true },
+          )
+        : [],
+      viewerId && !owner && !membership
+        ? q(
+            InvitationModel.find({
+              projectId,
+              inviteeId: viewerId,
+              status: "PENDING",
+            }).select("openingId status expiresAt"),
+            { lean: true },
+          )
+        : [],
+    ]);
     const memberProfiles = memberships.length
       ? await q(
           ProfileModel.find({
@@ -384,6 +405,22 @@ export function createProjectService({
     return {
       ...base,
       membershipId: membership ? String(membership._id) : null,
+      capacity: {
+        filled: memberships.length,
+        total: (project.openings ?? []).reduce(
+          (total, opening) => total + opening.capacity,
+          0,
+        ),
+      },
+      collaboration: {
+        pendingJoinOpeningIds: viewerJoins.map((item) =>
+          String(item.openingId),
+        ),
+        pendingInvitations: viewerInvitations.map((item) => ({
+          openingId: String(item.openingId),
+          expiresAt: item.expiresAt,
+        })),
+      },
       members: [
         {
           id: String(project.ownerId),

@@ -16,8 +16,10 @@
     "test:smoke:profile": "node scripts/smoke-profile-api.js",
     "test:smoke:gigs": "node scripts/smoke-gigs-api.js",
     "test:smoke:projects": "node scripts/smoke-projects-api.js",
+    "test:integration:projects": "node scripts/verify-project-participation-concurrency.js",
     "check": "node scripts/check-project.js",
     "db:verify-indexes": "node scripts/verify-database-indexes.js",
+    "db:ensure-project-indexes": "node scripts/ensure-project-participation-indexes.js",
     "db:seed:uiu": "node scripts/seed-uiu.js",
     "db:seed:skills": "node scripts/seed-skills.js",
     "db:migrate:test": "node scripts/migrate-test-database.js"

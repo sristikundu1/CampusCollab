@@ -25,11 +25,14 @@ export function ProjectManagePage() {
     [invitations, setInvitations] = useState([]),
     [members, setMembers] = useState([]),
     [query, setQuery] = useState(""),
-    [candidates, setCandidates] = useState([]),
+    [candidates, setCandidates] = useState(null),
     [openingId, setOpeningId] = useState(""),
+    [loading, setLoading] = useState(true),
     [busy, setBusy] = useState(""),
     [error, setError] = useState("");
   const load = useCallback(async () => {
+    setLoading(true);
+    setError("");
     try {
       const p = (await projectApi.get(projectId)).data.data.project;
       if (!p.isOwner) {
@@ -54,6 +57,8 @@ export function ProjectManagePage() {
       setMembers(m.data.data.members);
     } catch (e) {
       setError(apiError(e).message);
+    } finally {
+      setLoading(false);
     }
   }, [projectId, navigate]);
   useEffect(() => {
@@ -94,6 +99,14 @@ export function ProjectManagePage() {
       notify(apiError(e).message, "error");
     }
   };
+  const openingAction = (opening, command) =>
+    action(
+      command === "close" ? "Close opening" : "Reopen opening",
+      () => projectApi.openingState(project.id, opening.id, command),
+      command === "close"
+        ? "Pending requests and invitations for this role will expire."
+        : "Students will be able to request this role again.",
+    );
   const invite = async (candidate) => {
     setBusy(candidate.id);
     try {
@@ -111,18 +124,39 @@ export function ProjectManagePage() {
       setBusy("");
     }
   };
-  if (error)
-    return (
-      <AppShell>
-        <div className="surface p-8 text-center text-rose-700">{error}</div>
-      </AppShell>
-    );
-  if (!project)
+  if (loading)
     return (
       <AppShell>
         <div className="h-96 animate-pulse rounded-3xl bg-slate-200" />
       </AppShell>
     );
+  if (error || !project)
+    return (
+      <AppShell>
+        <div className="surface p-8 text-center">
+          <h1 className="text-xl font-black">Project workspace unavailable</h1>
+          <p className="mt-2 text-rose-700">{error}</p>
+          <div className="mt-5 flex flex-wrap justify-center gap-3">
+            <button className="btn-primary" onClick={load}>
+              Try again
+            </button>
+            <Link className="btn-secondary" to="/dashboard/projects">
+              Back to projects
+            </Link>
+          </div>
+        </div>
+      </AppShell>
+    );
+  const activeMembers = members.filter(
+    (member) => member.status === "ACTIVE" || member.status === "OWNER",
+  );
+  const activeCollaborators = activeMembers.filter(
+    (member) => member.status === "ACTIVE",
+  ).length;
+  const totalCapacity = project.openings.reduce(
+    (total, opening) => total + opening.capacity,
+    0,
+  );
   return (
     <AppShell>
       <div>
@@ -242,6 +276,64 @@ export function ProjectManagePage() {
             </button>
           )}
         </section>
+        <section className="surface mt-7 p-6">
+          <div className="flex flex-wrap items-end justify-between gap-3">
+            <div>
+              <h2 className="text-xl font-black">Project openings</h2>
+              <p className="mt-1 text-sm text-slate-500">
+                {activeCollaborators} / {totalCapacity} collaborator roles
+                filled
+              </p>
+            </div>
+            <Link
+              className="btn-secondary"
+              to={`/dashboard/projects/${project.id}/edit`}
+            >
+              <Pencil size={16} />
+              Add or edit roles
+            </Link>
+          </div>
+          <div className="mt-5 grid gap-3 md:grid-cols-2">
+            {project.openings.map((opening) => (
+              <article
+                key={opening.id}
+                className="rounded-2xl border border-slate-200 p-4"
+              >
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                  <div>
+                    <h3 className="font-black">{opening.roleName}</h3>
+                    <p className="mt-1 text-sm text-slate-500">
+                      {opening.filledCount} / {opening.capacity} filled ·{" "}
+                      {opening.status}
+                    </p>
+                  </div>
+                  {opening.status === "CLOSED" ? (
+                    <button
+                      className="btn-secondary !px-3 !py-2"
+                      disabled={Boolean(busy) || opening.remainingCapacity < 1}
+                      onClick={() => openingAction(opening, "reopen")}
+                    >
+                      <PlayCircle size={15} />
+                      Reopen
+                    </button>
+                  ) : (
+                    <button
+                      className="btn-secondary !px-3 !py-2"
+                      disabled={Boolean(busy)}
+                      onClick={() => openingAction(opening, "close")}
+                    >
+                      <PauseCircle size={15} />
+                      Close
+                    </button>
+                  )}
+                </div>
+              </article>
+            ))}
+            {!project.openings.length && (
+              <Empty text="No openings yet. Add a role before publishing." />
+            )}
+          </div>
+        </section>
         <div className="mt-7 grid gap-6 xl:grid-cols-2">
           <Panel
             title={`Join requests (${joins.filter((j) => j.status === "PENDING").length} pending)`}
@@ -258,6 +350,7 @@ export function ProjectManagePage() {
                     <>
                       <button
                         className="btn-primary !px-3 !py-2"
+                        disabled={Boolean(busy)}
                         onClick={() =>
                           action(
                             "Accept request",
@@ -271,6 +364,7 @@ export function ProjectManagePage() {
                       </button>
                       <button
                         className="btn-secondary !px-3 !py-2"
+                        disabled={Boolean(busy)}
                         onClick={() =>
                           action(
                             "Reject request",
@@ -290,8 +384,8 @@ export function ProjectManagePage() {
               <Empty text="No join requests yet." />
             )}
           </Panel>
-          <Panel title={`Members (${members.length})`}>
-            {members.map((m) => (
+          <Panel title={`Members (${activeMembers.length})`}>
+            {activeMembers.map((m) => (
               <Row
                 key={m.id}
                 title={m.user.displayName}
@@ -300,6 +394,7 @@ export function ProjectManagePage() {
                 {m.status === "ACTIVE" && !m.id.startsWith("owner-") && (
                   <button
                     className="btn-secondary !px-3 !py-2 !text-rose-700"
+                    disabled={Boolean(busy)}
                     onClick={() =>
                       action(
                         "Remove member",
@@ -330,6 +425,9 @@ export function ProjectManagePage() {
                 value={openingId}
                 onChange={(e) => setOpeningId(e.target.value)}
               >
+                {!project.openings.some((o) => o.status === "OPEN") && (
+                  <option value="">No available opening</option>
+                )}
                 {project.openings
                   .filter((o) => o.status === "OPEN")
                   .map((o) => (
@@ -344,7 +442,7 @@ export function ProjectManagePage() {
               </button>
             </div>
             <div className="mt-4 space-y-3">
-              {candidates.map((c) => (
+              {(candidates ?? []).map((c) => (
                 <Row
                   key={c.id}
                   title={c.displayName}
@@ -360,6 +458,12 @@ export function ProjectManagePage() {
                   </button>
                 </Row>
               ))}
+              {candidates === null && (
+                <Empty text="Search for a student to send an invitation." />
+              )}
+              {candidates !== null && !candidates.length && (
+                <Empty text="No eligible students matched your search." />
+              )}
             </div>
           </Panel>
           <Panel title={`Sent invitations (${invitations.length})`}>
@@ -373,6 +477,7 @@ export function ProjectManagePage() {
                   {i.status === "PENDING" && (
                     <button
                       className="btn-secondary !px-3 !py-2"
+                      disabled={Boolean(busy)}
                       onClick={() =>
                         action(
                           "Revoke invitation",

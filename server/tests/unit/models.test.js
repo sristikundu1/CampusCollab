@@ -108,6 +108,23 @@ test("TTL and critical unique indexes match Phase 3", () => {
     "SHORTLISTED",
     "ACCEPTED",
   ]);
+  const membershipUnique = models.ProjectMembership.schema
+    .indexes()
+    .find(
+      ([, options]) => options.name === "uq_memberships_active_project_user",
+    );
+  assert.equal(membershipUnique[1].unique, true);
+  assert.deepEqual(membershipUnique[1].partialFilterExpression, {
+    status: "ACTIVE",
+  });
+  assert.ok(
+    models.ProjectMembership.schema
+      .indexes()
+      .some(
+        ([, options]) =>
+          options.name === "ix_memberships_project_opening_status",
+      ),
+  );
 });
 
 test("every explicit index name is globally unique", () => {

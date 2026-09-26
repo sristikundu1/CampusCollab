@@ -55,6 +55,8 @@ export function ProjectDetailsPage() {
       notify("Join request sent.");
       setSelected("");
       setMessage("");
+      const response = await projectApi.get(projectId);
+      setProject(response.data.data.project);
     } catch (e) {
       notify(apiError(e).message, "error");
     } finally {
@@ -79,6 +81,17 @@ export function ProjectDetailsPage() {
         <div className="mx-auto h-96 max-w-6xl animate-pulse rounded-3xl bg-slate-200" />
       </MarketplaceLayout>
     );
+  const pendingJoinOpenings = new Set(
+    project.collaboration?.pendingJoinOpeningIds ?? [],
+  );
+  const pendingInvitationOpenings = new Set(
+    (project.collaboration?.pendingInvitations ?? [])
+      .filter(
+        (invitation) =>
+          !invitation.expiresAt || new Date(invitation.expiresAt) > new Date(),
+      )
+      .map((invitation) => invitation.openingId),
+  );
   return (
     <MarketplaceLayout>
       <div className="mx-auto max-w-6xl">
@@ -131,6 +144,11 @@ export function ProjectDetailsPage() {
             <section>
               <h2 className="text-2xl font-black">Open roles</h2>
               <div className="mt-4 space-y-4">
+                {!project.openings.length && (
+                  <div className="surface p-8 text-center text-slate-500">
+                    No open positions yet.
+                  </div>
+                )}
                 {project.openings.map((o) => (
                   <article
                     key={o.id}
@@ -159,8 +177,30 @@ export function ProjectDetailsPage() {
                     </div>
                     {!project.isOwner &&
                       !project.isMember &&
-                      project.acceptingMembers &&
-                      o.status === "OPEN" && (
+                      (pendingJoinOpenings.has(o.id) ? (
+                        <span className="mt-5 inline-flex rounded-xl bg-amber-50 px-4 py-2 text-sm font-black text-amber-700">
+                          Request pending
+                        </span>
+                      ) : pendingInvitationOpenings.has(o.id) ? (
+                        <Link
+                          className="btn-secondary mt-5"
+                          to="/dashboard/invitations"
+                        >
+                          Invitation pending
+                        </Link>
+                      ) : !project.acceptingMembers ? (
+                        <span className="mt-5 inline-flex rounded-xl bg-slate-100 px-4 py-2 text-sm font-black text-slate-600">
+                          Recruitment paused
+                        </span>
+                      ) : o.status === "CLOSED" ? (
+                        <span className="mt-5 inline-flex rounded-xl bg-slate-100 px-4 py-2 text-sm font-black text-slate-600">
+                          Closed
+                        </span>
+                      ) : o.status === "FILLED" || o.remainingCapacity < 1 ? (
+                        <span className="mt-5 inline-flex rounded-xl bg-slate-100 px-4 py-2 text-sm font-black text-slate-600">
+                          Full
+                        </span>
+                      ) : (
                         <button
                           className="btn-secondary mt-5"
                           onClick={() => setSelected(o.id)}
@@ -168,7 +208,42 @@ export function ProjectDetailsPage() {
                           <Send size={16} />
                           Request this role
                         </button>
-                      )}
+                      ))}
+                    {project.isMember && (
+                      <span className="mt-5 inline-flex rounded-xl bg-emerald-50 px-4 py-2 text-sm font-black text-emerald-700">
+                        Member
+                      </span>
+                    )}
+                  </article>
+                ))}
+              </div>
+            </section>
+            <section className="surface p-7">
+              <div className="flex flex-wrap items-end justify-between gap-3">
+                <div>
+                  <p className="eyebrow">Team</p>
+                  <h2 className="mt-2 text-2xl font-black">Project members</h2>
+                </div>
+                <span className="text-sm font-bold text-slate-500">
+                  {project.capacity?.filled ?? 0} /{" "}
+                  {project.capacity?.total ?? 0} collaborator roles filled
+                </span>
+              </div>
+              <div className="mt-5 grid gap-3 sm:grid-cols-2">
+                {(project.members ?? []).map((member) => (
+                  <article
+                    key={member.id}
+                    className="rounded-2xl border border-slate-200 p-4"
+                  >
+                    <h3 className="font-black">{member.displayName}</h3>
+                    <p className="mt-1 text-sm font-bold text-indigo-700">
+                      {member.role}
+                    </p>
+                    {member.headline && (
+                      <p className="mt-2 text-sm text-slate-500">
+                        {member.headline}
+                      </p>
+                    )}
                   </article>
                 ))}
               </div>
@@ -178,6 +253,16 @@ export function ProjectDetailsPage() {
             <section className="surface p-6">
               <h2 className="text-lg font-black">Project snapshot</h2>
               <dl className="mt-5 space-y-4 text-sm">
+                <div className="flex gap-3">
+                  <Users className="text-indigo-600" size={18} />
+                  <div>
+                    <dt className="text-slate-500">Capacity</dt>
+                    <dd className="font-bold">
+                      {project.capacity?.filled ?? 0} /{" "}
+                      {project.capacity?.total ?? 0} roles filled
+                    </dd>
+                  </div>
+                </div>
                 <div className="flex gap-3">
                   <Users className="text-indigo-600" size={18} />
                   <div>

@@ -9,9 +9,12 @@ export function ParticipationInboxPage({ type }) {
   const invitation = type === "invitations",
     { notify } = useToast();
   const [items, setItems] = useState([]),
+    [loading, setLoading] = useState(true),
     [error, setError] = useState(""),
     [busy, setBusy] = useState("");
   const load = useCallback(async () => {
+    setLoading(true);
+    setError("");
     try {
       const r = invitation
         ? await participationApi.myInvitations()
@@ -19,6 +22,8 @@ export function ParticipationInboxPage({ type }) {
       setItems(r.data.data[invitation ? "invitations" : "joinRequests"]);
     } catch (e) {
       setError(apiError(e).message);
+    } finally {
+      setLoading(false);
     }
   }, [invitation]);
   useEffect(() => {
@@ -61,74 +66,85 @@ export function ParticipationInboxPage({ type }) {
             : "Track requests you sent to project teams."}
         </p>
         {error && (
-          <p className="mt-6 rounded-xl bg-rose-50 p-4 text-rose-700">
-            {error}
-          </p>
+          <div className="mt-6 rounded-xl bg-rose-50 p-4 text-rose-700">
+            <p>{error}</p>
+            <button className="mt-3 font-black underline" onClick={load}>
+              Try again
+            </button>
+          </div>
         )}
         <div className="mt-7 space-y-4">
-          {items.map((item) => (
-            <article key={item.id} className="surface p-6">
-              <div className="flex flex-wrap items-start justify-between gap-4">
-                <div>
-                  <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-black">
-                    {item.status}
-                  </span>
-                  <h2 className="mt-3 text-xl font-black">
-                    {item.project.title}
-                  </h2>
-                  <p className="mt-1 text-sm font-bold text-indigo-700">
-                    Role: {item.opening.roleName}
-                  </p>
-                  {item.message && (
-                    <p className="mt-3 text-sm leading-6 text-slate-600">
-                      {item.message}
+          {loading && (
+            <div
+              className="h-40 animate-pulse rounded-3xl bg-slate-200"
+              role="status"
+              aria-label="Loading participation activity"
+            />
+          )}
+          {!loading &&
+            items.map((item) => (
+              <article key={item.id} className="surface p-6">
+                <div className="flex flex-wrap items-start justify-between gap-4">
+                  <div>
+                    <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-black">
+                      {item.status}
+                    </span>
+                    <h2 className="mt-3 text-xl font-black">
+                      {item.project.title}
+                    </h2>
+                    <p className="mt-1 text-sm font-bold text-indigo-700">
+                      Role: {item.opening.roleName}
                     </p>
-                  )}
+                    {item.message && (
+                      <p className="mt-3 text-sm leading-6 text-slate-600">
+                        {item.message}
+                      </p>
+                    )}
+                  </div>
+                  <Link
+                    className="btn-secondary !px-4 !py-2"
+                    to={`/projects/${item.project.id}`}
+                  >
+                    <ExternalLink size={15} />
+                    View project
+                  </Link>
                 </div>
-                <Link
-                  className="btn-secondary !px-4 !py-2"
-                  to={`/projects/${item.project.id}`}
-                >
-                  <ExternalLink size={15} />
-                  View project
-                </Link>
-              </div>
-              {item.status === "PENDING" && (
-                <div className="mt-5 flex gap-2 border-t border-slate-100 pt-4">
-                  {invitation ? (
-                    <>
-                      <button
-                        disabled={busy === item.id}
-                        className="btn-primary"
-                        onClick={() => act(item, "accept")}
-                      >
-                        <Check size={16} />
-                        Accept
-                      </button>
+                {item.status === "PENDING" && (
+                  <div className="mt-5 flex gap-2 border-t border-slate-100 pt-4">
+                    {invitation ? (
+                      <>
+                        <button
+                          disabled={busy === item.id}
+                          className="btn-primary"
+                          onClick={() => act(item, "accept")}
+                        >
+                          <Check size={16} />
+                          Accept
+                        </button>
+                        <button
+                          disabled={busy === item.id}
+                          className="btn-secondary"
+                          onClick={() => act(item, "reject")}
+                        >
+                          <X size={16} />
+                          Reject
+                        </button>
+                      </>
+                    ) : (
                       <button
                         disabled={busy === item.id}
                         className="btn-secondary"
-                        onClick={() => act(item, "reject")}
+                        onClick={() => act(item, "withdraw")}
                       >
                         <X size={16} />
-                        Reject
+                        Withdraw request
                       </button>
-                    </>
-                  ) : (
-                    <button
-                      disabled={busy === item.id}
-                      className="btn-secondary"
-                      onClick={() => act(item, "withdraw")}
-                    >
-                      <X size={16} />
-                      Withdraw request
-                    </button>
-                  )}
-                </div>
-              )}
-            </article>
-          ))}
-          {!items.length && !error && (
+                    )}
+                  </div>
+                )}
+              </article>
+            ))}
+          {!loading && !items.length && !error && (
             <div className="surface p-10 text-center">
               <Clock3 className="mx-auto text-slate-400" />
               <h2 className="mt-4 text-xl font-black">Nothing here yet</h2>

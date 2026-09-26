@@ -8,6 +8,7 @@ import { ProjectDetailsPage } from "./ProjectDetailsPage.jsx";
 import { ProjectsPage } from "./ProjectsPage.jsx";
 import { ParticipationInboxPage } from "./ParticipationInboxPage.jsx";
 import { ProjectFormPage } from "./ProjectFormPage.jsx";
+import { ProjectManagePage } from "./ProjectManagePage.jsx";
 const mocks = vi.hoisted(() => ({
   list: vi.fn(),
   get: vi.fn(),
@@ -15,6 +16,13 @@ const mocks = vi.hoisted(() => ({
   update: vi.fn(),
   addOpening: vi.fn(),
   updateOpening: vi.fn(),
+  openingState: vi.fn(),
+  projectJoins: vi.fn(),
+  projectInvitations: vi.fn(),
+  projectMembers: vi.fn(),
+  candidates: vi.fn(),
+  invite: vi.fn(),
+  remove: vi.fn(),
   skillList: vi.fn(),
   join: vi.fn(),
   myJoins: vi.fn(),
@@ -32,6 +40,11 @@ vi.mock("../services/api.js", () => ({
     update: mocks.update,
     addOpening: mocks.addOpening,
     updateOpening: mocks.updateOpening,
+    openingState: mocks.openingState,
+    joins: mocks.projectJoins,
+    invitations: mocks.projectInvitations,
+    members: mocks.projectMembers,
+    candidates: mocks.candidates,
   },
   skillApi: { list: mocks.skillList },
   participationApi: {
@@ -40,6 +53,8 @@ vi.mock("../services/api.js", () => ({
     myInvitations: mocks.myInvites,
     joinAction: mocks.joinAction,
     invitationAction: mocks.inviteAction,
+    invite: mocks.invite,
+    remove: mocks.remove,
   },
   apiError: (e) => ({
     status: e?.response?.status,
@@ -77,6 +92,19 @@ const project = {
   owner: { id: "e".repeat(24), displayName: "Project Owner" },
   isOwner: false,
   isMember: false,
+  capacity: { filled: 0, total: 2 },
+  collaboration: {
+    pendingJoinOpeningIds: [],
+    pendingInvitations: [],
+  },
+  members: [
+    {
+      id: "e".repeat(24),
+      displayName: "Project Owner",
+      role: "Project owner",
+      isOwner: true,
+    },
+  ],
 };
 const response = (data) =>
   Promise.resolve({ data: { data, meta: { pagination: { hasMore: false } } } });
@@ -112,6 +140,28 @@ beforeEach(() => {
   mocks.updateOpening.mockImplementation(() =>
     response({ opening: project.openings[0] }),
   );
+  mocks.openingState.mockImplementation(() =>
+    response({ opening: { ...project.openings[0], status: "CLOSED" } }),
+  );
+  mocks.projectJoins.mockImplementation(() => response({ joinRequests: [] }));
+  mocks.projectInvitations.mockImplementation(() =>
+    response({ invitations: [] }),
+  );
+  mocks.projectMembers.mockImplementation(() =>
+    response({
+      members: [
+        {
+          id: `owner-${ID}`,
+          user: { displayName: "Project Owner" },
+          role: "Project owner",
+          status: "OWNER",
+        },
+      ],
+    }),
+  );
+  mocks.candidates.mockImplementation(() => response({ candidates: [] }));
+  mocks.invite.mockImplementation(() => response({ invitation: {} }));
+  mocks.remove.mockImplementation(() => response({ membership: {} }));
   mocks.skillList.mockImplementation(() =>
     response({ skills: project.skills }),
   );
@@ -286,6 +336,51 @@ describe("Projects collaboration workflow", () => {
       ),
     );
     expect(mocks.notify).toHaveBeenCalledWith("Join request sent.");
+  });
+  it("shows server-provided collaboration state and member capacity", async () => {
+    mocks.get.mockImplementationOnce(() =>
+      response({
+        project: {
+          ...project,
+          collaboration: {
+            pendingJoinOpeningIds: [OPEN],
+            pendingInvitations: [],
+          },
+        },
+      }),
+    );
+    show(
+      <Routes>
+        <Route path="/projects/:projectId" element={<ProjectDetailsPage />} />
+      </Routes>,
+      `/projects/${ID}`,
+    );
+    expect(await screen.findByText("Request pending")).toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "Request this role" }),
+    ).toBeNull();
+    expect(
+      screen.getByText("0 / 2 collaborator roles filled"),
+    ).toBeInTheDocument();
+    expect(screen.getByText("Project members")).toBeInTheDocument();
+  });
+  it("lets an owner close an opening from the management workspace", async () => {
+    const user = userEvent.setup();
+    mocks.get.mockImplementation(() =>
+      response({ project: { ...project, isOwner: true } }),
+    );
+    show(
+      <Routes>
+        <Route
+          path="/projects/:projectId/manage"
+          element={<ProjectManagePage />}
+        />
+      </Routes>,
+      `/projects/${ID}/manage`,
+    );
+    await user.click(await screen.findByRole("button", { name: "Close" }));
+    await waitFor(() => expect(mocks.confirm).toHaveBeenCalled());
+    expect(mocks.openingState).toHaveBeenCalledWith(ID, OPEN, "close");
   });
   it("shows the request lifecycle and confirms withdrawal without browser confirmation", async () => {
     const user = userEvent.setup();
