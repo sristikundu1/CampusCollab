@@ -1,21 +1,43 @@
 import { MailCheck } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { Spinner } from "../components/Spinner.jsx";
 import { AuthLayout } from "../layouts/AuthLayout.jsx";
 import { apiError, authApi } from "../services/api.js";
 export function VerifyEmailPage() {
   const location = useLocation();
-  const [state, setState] = useState("waiting");
+  const shouldRequestCode = location.state?.requestCode === true;
+  const requestedCode = useRef(false);
+  const [state, setState] = useState(shouldRequestCode ? "loading" : "waiting");
   const [message, setMessage] = useState(
-    location.state?.message ||
-      "Enter the 6-digit code sent to your university email.",
+    shouldRequestCode
+      ? "Requesting a verification code for your account..."
+      : location.state?.message ||
+          "Enter the 6-digit code sent to your university email.",
   );
   const [email, setEmail] = useState(location.state?.email || "");
   const [code, setCode] = useState("");
   const [remaining, setRemaining] = useState(
     location.state?.expiresInSeconds || 600,
   );
+  const resend = async () => {
+    setState("loading");
+    try {
+      const { data } = await authApi.resend(email);
+      setMessage(data.data.message);
+      setRemaining(data.data.expiresInSeconds || 600);
+      setCode("");
+      setState("waiting");
+    } catch (error) {
+      setMessage(apiError(error).message);
+      setState("error");
+    }
+  };
+  useEffect(() => {
+    if (!shouldRequestCode || requestedCode.current) return;
+    requestedCode.current = true;
+    void resend();
+  }, [shouldRequestCode]);
   useEffect(() => {
     if (state !== "waiting" || remaining <= 0) return undefined;
     const timer = window.setInterval(
@@ -31,19 +53,6 @@ export function VerifyEmailPage() {
       const { data } = await authApi.verify(email, code);
       setMessage(data.data.message);
       setState("success");
-    } catch (error) {
-      setMessage(apiError(error).message);
-      setState("error");
-    }
-  };
-  const resend = async () => {
-    setState("loading");
-    try {
-      const { data } = await authApi.resend(email);
-      setMessage(data.data.message);
-      setRemaining(data.data.expiresInSeconds || 600);
-      setCode("");
-      setState("waiting");
     } catch (error) {
       setMessage(apiError(error).message);
       setState("error");

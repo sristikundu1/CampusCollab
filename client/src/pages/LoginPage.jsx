@@ -46,7 +46,11 @@ export function LoginPage() {
       const parsed = apiError(error);
       if (parsed.code === "EMAIL_VERIFICATION_REQUIRED") {
         navigate("/verify-email", {
-          state: { email: values.email, message: parsed.message },
+          state: {
+            email: values.email,
+            message: parsed.message,
+            requestCode: true,
+          },
         });
         return;
       }

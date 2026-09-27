@@ -18,7 +18,7 @@ function response(data) {
   return Promise.resolve({ data: { data } });
 }
 
-function renderPage() {
+function renderPage({ requestCode = false } = {}) {
   return render(
     <MemoryRouter
       initialEntries={[
@@ -28,6 +28,7 @@ function renderPage() {
             email: "student@example.edu",
             message: "Enter the code from your inbox.",
             expiresInSeconds: 600,
+            requestCode,
           },
         },
       ]}
@@ -55,6 +56,17 @@ afterEach(() => {
 });
 
 describe("university email verification", () => {
+  it("automatically requests a code after an unverified login", async () => {
+    renderPage({ requestCode: true });
+
+    await waitFor(() =>
+      expect(mocks.resend).toHaveBeenCalledWith("student@example.edu"),
+    );
+    expect(
+      await screen.findByText("A new verification code has been sent."),
+    ).toBeInTheDocument();
+  });
+
   it("submits the account email with a six-digit code", async () => {
     const user = userEvent.setup();
     renderPage();
