@@ -102,7 +102,15 @@ const list = z
       .optional(),
     skillId: id.optional(),
     status: z
-      .enum(["DRAFT", "RECRUITING", "ACTIVE", "CANCELLED", "ARCHIVED"])
+      .enum([
+        "DRAFT",
+        "RECRUITING",
+        "ACTIVE",
+        "COMPLETION_PENDING",
+        "COMPLETED",
+        "CANCELLED",
+        "ARCHIVED",
+      ])
       .optional(),
     sort: z.enum(["NEWEST", "OLDEST"]).default("NEWEST"),
     cursor: z.string().max(1024).optional(),

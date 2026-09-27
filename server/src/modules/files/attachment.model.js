@@ -35,6 +35,7 @@ const attachmentSchema = addVersion(
         select: false,
       }),
       integrityHash: textField({ required: true, max: 256, select: false }),
+      content: { type: Buffer, required: true, select: false },
       scanStatus: {
         type: String,
         enum: [

@@ -48,9 +48,26 @@ export const sendMessageRequest = z.object({
   body: z
     .object({
       clientMessageId: z.string().uuid(),
-      body: z.string().trim().min(1).max(5000),
+      body: z
+        .string()
+        .trim()
+        .max(5000)
+        .transform((value) => value || undefined)
+        .optional(),
+      attachmentIds: z
+        .array(id)
+        .max(3)
+        .refine(
+          (values) => new Set(values).size === values.length,
+          "Attachments must be unique",
+        )
+        .optional(),
     })
-    .strict(),
+    .strict()
+    .refine(
+      (value) => value.body || value.attachmentIds?.length,
+      "A message or attachment is required",
+    ),
 });
 
 export const markReadRequest = z.object({

@@ -141,6 +141,36 @@ const NotificationsPage = lazy(() =>
     default: module.NotificationsPage,
   })),
 );
+const CompletionsPage = lazy(() =>
+  import("./pages/CompletionsPage.jsx").then((module) => ({
+    default: module.CompletionsPage,
+  })),
+);
+const ReportsPage = lazy(() =>
+  import("./pages/ReportsPage.jsx").then((module) => ({
+    default: module.ReportsPage,
+  })),
+);
+const AdminModerationPage = lazy(() =>
+  import("./pages/AdminModerationPage.jsx").then((module) => ({
+    default: module.AdminModerationPage,
+  })),
+);
+const AccountSettingsPage = lazy(() =>
+  import("./pages/AccountSettingsPage.jsx").then((module) => ({
+    default: module.AccountSettingsPage,
+  })),
+);
+const AdminPlatformPage = lazy(() =>
+  import("./pages/AdminPlatformPage.jsx").then((module) => ({
+    default: module.AdminPlatformPage,
+  })),
+);
+const RecoverAccountPage = lazy(() =>
+  import("./pages/RecoverAccountPage.jsx").then((module) => ({
+    default: module.RecoverAccountPage,
+  })),
+);
 
 function PageFallback() {
   return (
@@ -178,6 +208,7 @@ export function App() {
           <Route path="/verify-email" element={<VerifyEmailPage />} />
           <Route path="/forgot-password" element={<ForgotPasswordPage />} />
           <Route path="/reset-password" element={<ResetPasswordPage />} />
+          <Route path="/recover-account" element={<RecoverAccountPage />} />
         </Route>
         <Route element={<ProtectedRoute />}>
           <Route path="/dashboard" element={<DashboardPage />} />
@@ -226,6 +257,14 @@ export function App() {
             path="/dashboard/notifications"
             element={<NotificationsPage />}
           />
+          <Route path="/dashboard/completions" element={<CompletionsPage />} />
+          <Route path="/dashboard/reports" element={<ReportsPage />} />
+          <Route path="/dashboard/account" element={<AccountSettingsPage />} />
+          <Route
+            path="/dashboard/admin/moderation"
+            element={<AdminModerationPage />}
+          />
+          <Route path="/dashboard/admin" element={<AdminPlatformPage />} />
           <Route
             path="/dashboard/messages/:conversationId"
             element={<MessagesPage />}

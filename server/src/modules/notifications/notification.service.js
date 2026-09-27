@@ -22,6 +22,10 @@ const destination = (notification) => {
       return id ? `/projects/${id}` : "/dashboard/projects";
     case "CONVERSATION":
       return id ? `/dashboard/messages/${id}` : "/dashboard/messages";
+    case "COMPLETION":
+      return "/dashboard/completions";
+    case "REPORT":
+      return "/dashboard/reports";
     default:
       return null;
   }

@@ -2,8 +2,10 @@ import {
   ArrowLeft,
   LoaderCircle,
   MessageCircle,
+  Paperclip,
   RefreshCw,
   Send,
+  X,
 } from "lucide-react";
 import {
   useCallback,
@@ -14,7 +16,7 @@ import {
 } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { AppShell } from "../layouts/AppShell.jsx";
-import { apiError, messagingApi } from "../services/api.js";
+import { apiError, attachmentApi, messagingApi } from "../services/api.js";
 
 const time = (value) =>
   value
@@ -35,6 +37,7 @@ export function MessagesPage() {
   const [loading, setLoading] = useState(true);
   const [messagesLoading, setMessagesLoading] = useState(false);
   const [sending, setSending] = useState(false);
+  const [attachments, setAttachments] = useState([]);
   const [error, setError] = useState("");
   const messagePaneRef = useRef(null);
   const preserveScrollRef = useRef(null);
@@ -143,12 +146,13 @@ export function MessagesPage() {
   const submit = async (event) => {
     event.preventDefault();
     const text = body.trim();
-    if (!text || sending || !conversationId) return;
+    if ((!text && !attachments.length) || sending || !conversationId) return;
     setSending(true);
     try {
       const response = await messagingApi.send(conversationId, {
         clientMessageId: crypto.randomUUID(),
-        body: text,
+        ...(text ? { body: text } : {}),
+        attachmentIds: attachments.map((item) => item.id),
       });
       const sent = response.data.data.message;
       setMessages((current) =>
@@ -157,12 +161,52 @@ export function MessagesPage() {
           : [...current, sent],
       );
       setBody("");
+      setAttachments([]);
       void loadConversations();
     } catch (reason) {
       setError(apiError(reason).message);
     } finally {
       setSending(false);
     }
+  };
+
+  const attach = async (event) => {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+    if (!file || !conversationId) return;
+    if (!["image/png", "image/jpeg"].includes(file.type)) {
+      setError("Choose a PNG or JPEG image.");
+      return;
+    }
+    if (file.size > 80 * 1024) {
+      setError("Image attachments must be 80 KB or smaller.");
+      return;
+    }
+    setSending(true);
+    try {
+      const bytes = new Uint8Array(await file.arrayBuffer());
+      let binary = "";
+      for (const byte of bytes) binary += String.fromCharCode(byte);
+      const uploaded = await attachmentApi.uploadMessage(
+        conversationId,
+        file.name,
+        file.type,
+        btoa(binary),
+      );
+      setAttachments((current) => [...current, uploaded.data.data.attachment]);
+      setError("");
+    } catch (reason) {
+      setError(apiError(reason).message);
+    } finally {
+      setSending(false);
+    }
+  };
+
+  const removeAttachment = async (attachment) => {
+    setAttachments((current) =>
+      current.filter((item) => item.id !== attachment.id),
+    );
+    await attachmentApi.remove(attachment.id).catch(() => {});
   };
 
   return (
@@ -324,6 +368,22 @@ export function MessagesPage() {
                             <p className="whitespace-pre-wrap break-words text-sm leading-6">
                               {message.body}
                             </p>
+                            {message.attachments?.map((attachment) => (
+                              <a
+                                key={attachment.id}
+                                href={attachment.url}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="mt-2 block overflow-hidden rounded-xl border border-white/30"
+                              >
+                                <img
+                                  src={attachment.url}
+                                  alt={attachment.fileName}
+                                  className="max-h-64 w-full object-contain"
+                                  loading="lazy"
+                                />
+                              </a>
+                            ))}
                             <time
                               className={`mt-1 block text-right text-[11px] ${message.isOwn ? "text-blue-100" : "text-slate-400"}`}
                             >
@@ -339,7 +399,43 @@ export function MessagesPage() {
                   className="border-t border-slate-200 bg-white p-3 sm:p-4"
                   onSubmit={submit}
                 >
+                  {attachments.length > 0 && (
+                    <div className="mb-3 flex flex-wrap gap-2">
+                      {attachments.map((attachment) => (
+                        <span
+                          key={attachment.id}
+                          className="inline-flex items-center gap-2 rounded-xl bg-indigo-50 px-3 py-2 text-xs font-bold text-indigo-700"
+                        >
+                          {attachment.fileName}
+                          <button
+                            type="button"
+                            aria-label={`Remove ${attachment.fileName}`}
+                            onClick={() => removeAttachment(attachment)}
+                          >
+                            <X size={14} />
+                          </button>
+                        </span>
+                      ))}
+                    </div>
+                  )}
                   <div className="flex items-end gap-2">
+                    <label
+                      className="grid size-12 shrink-0 cursor-pointer place-items-center rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-50"
+                      aria-label="Attach image"
+                    >
+                      <Paperclip size={19} />
+                      <input
+                        className="sr-only"
+                        type="file"
+                        accept="image/png,image/jpeg"
+                        disabled={
+                          selected?.canSend === false ||
+                          sending ||
+                          attachments.length >= 3
+                        }
+                        onChange={attach}
+                      />
+                    </label>
                     <textarea
                       className="field max-h-36 min-h-12 resize-none"
                       aria-label="Message"
@@ -363,7 +459,9 @@ export function MessagesPage() {
                     <button
                       className="btn-primary !size-12 !p-0"
                       disabled={
-                        !body.trim() || sending || selected?.canSend === false
+                        (!body.trim() && !attachments.length) ||
+                        sending ||
+                        selected?.canSend === false
                       }
                       aria-label="Send message"
                     >
@@ -375,7 +473,8 @@ export function MessagesPage() {
                     </button>
                   </div>
                   <p className="mt-2 text-xs text-slate-400">
-                    Enter to send · Shift+Enter for a new line
+                    Enter to send · Shift+Enter for a new line · PNG/JPEG up to
+                    80 KB
                   </p>
                 </form>
               </>

@@ -421,24 +421,17 @@ This file imports and exports all 27 registered Mongoose models so schemas and i
 | `projectMemberships` | `modules/participation/project-membership.model.js` | Accepted project members |
 | `conversations` | `modules/messaging/conversation.model.js` | Authorized opportunity conversations and participant read state |
 | `messages` | `modules/messaging/message.model.js` | Immutable, idempotent conversation messages |
+| `attachments` | `modules/files/attachment.model.js` | Private message image bytes and metadata |
 | `notifications` | `modules/notifications/notification.model.js` | Recipient-owned in-app activity and read state |
+| `completionRecords` | `modules/completion/completion-record.model.js` | Work-completion acknowledgement and disputes |
+| `reports` | `modules/moderation/report.model.js` | Confidential user/content reports |
+| `moderationCases` | `modules/moderation/moderation-case.model.js` | Moderator investigation state |
+| `moderationActions` | `modules/moderation/moderation-action.model.js` | Auditable moderation decisions |
+| `auditEvents` | `modules/audit/audit-event.model.js` | Immutable audit history |
+| `outboxEvents` | `modules/audit/outbox-event.model.js` | Reliable event publication records |
+| `accountDeletionJobs` | `modules/users/account-deletion-job.model.js` | Scheduled deletion and recovery window |
 
 All model paths above are relative to `server/src/`.
-
-### Collections currently prepared as foundations only
-
-These schemas and indexes exist, but this version does not yet expose complete controllers/services/routes for the feature:
-
-| Collection | Model file | Future area |
-|---|---|---|
-| `attachments` | `modules/files/attachment.model.js` | File attachments |
-| `completionRecords` | `modules/completion/completion-record.model.js` | Work completion |
-| `reports` | `modules/moderation/report.model.js` | User/content reports |
-| `moderationCases` | `modules/moderation/moderation-case.model.js` | Moderation cases |
-| `moderationActions` | `modules/moderation/moderation-action.model.js` | Moderation decisions |
-| `auditEvents` | `modules/audit/audit-event.model.js` | Immutable audit history |
-| `outboxEvents` | `modules/audit/outbox-event.model.js` | Reliable event publication foundation |
-| `accountDeletionJobs` | `modules/users/account-deletion-job.model.js` | Account-deletion workflow |
 
 ## 11. Important shared files
 
@@ -455,11 +448,26 @@ These schemas and indexes exist, but this version does not yet expose complete c
 | `server/src/modules/auth/auth.middleware.js` | Reads the session cookie, authenticates, and enforces CSRF |
 | `server/src/lib/mongo/transaction.js` | Runs multi-document operations inside MongoDB transactions |
 
-## 12. Five-minute explanation script
+## 12. New MVP workflow map
+
+Use these files when explaining the completed MVP workflows:
+
+| Workflow | Routes/controller/service | Collection model |
+|---|---|---|
+| Messaging and attachments | `modules/messaging/*`, `modules/files/*` | `messages`, `conversations`, `attachments` |
+| Notifications | `modules/notifications/*` | `notifications` |
+| Completion acknowledgement/disputes | `modules/completion/completion.routes.js`, `completion.controller.js`, `completion.service.js` | `completion_records` |
+| Reports and moderation | `modules/moderation/moderation.routes.js`, `moderation.controller.js`, `moderation.service.js` | `reports`, `moderation_cases`, `moderation_actions` |
+| Account deletion/recovery | `modules/users/account.routes.js`, `account.controller.js`, `account.service.js` | `account_deletion_jobs`, `users`, `sessions` |
+| Admin users/reference data | `modules/admin/admin.routes.js`, `admin.controller.js`, `admin.service.js` | `users`, `skills`, `universities`, `university_domains` |
+
+The route file defines HTTP methods and middleware, the controller converts HTTP input/output, the service owns authorization and business rules, and the model defines MongoDB shape/indexes. Cross-cutting security and evidence are stored in `sessions`, `audit_events`, and `outbox_events`.
+
+## 13. Five-minute explanation script
 
 You can explain the current backend like this:
 
-> The backend is a modular Express application. `server.js` validates the environment, connects MongoDB, creates the Express app, and starts port 5000. `app.js` installs security, CORS, JSON parsing, logging, and error middleware, then mounts all business routes under `/api/v1`. Each feature is separated into route, validation, controller, service, and model files. The route chooses the HTTP endpoint, Zod validates the request, the controller translates HTTP data, the service enforces ownership and lifecycle rules, and the Mongoose model reads or writes a named MongoDB collection. The implemented feature modules are authentication, profiles, skills, gigs, proposals, projects, participation, messaging, and notifications. Messaging reuses accepted gig proposals and active project memberships as its authorization boundary. Notifications are created only by trusted server-side workflow integrations and are always queried or mutated through the authenticated recipient.
+> The backend is a modular Express application. `server.js` validates the environment, connects MongoDB, creates the Express app, and starts port 5000. `app.js` installs security, CORS, JSON parsing, logging, and error middleware, then mounts all business routes under `/api/v1`. Each feature is separated into route, validation, controller, service, and model files. The route chooses the HTTP endpoint, Zod validates the request, the controller translates HTTP data, the service enforces ownership and lifecycle rules, and the Mongoose model reads or writes a named MongoDB collection. The modules cover authentication, profiles, gigs, proposals, projects, participation, messaging, notifications, completion, reports/moderation, account lifecycle, files, and scoped administration. Private resources always derive access from the authenticated session and server-side ownership or participation records.
 
 For a live code example, open these files in order:
 

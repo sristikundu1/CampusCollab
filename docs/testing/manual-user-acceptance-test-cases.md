@@ -297,7 +297,23 @@ Use a published/recruiting project owned by User A. Use User B as the prospectiv
 | NOTICE-07 | Send one message from User A to User B, then refresh and leave message polling active. | User B receives one message notification; refreshes and polling do not create duplicates. | |
 | NOTICE-08 | Open Notifications at phone width and desktop width. | Long text wraps, timestamps and actions remain visible, and no horizontal scrollbar appears. | |
 
-## L. Ownership and Authorization — Two-User Security Test
+## L. Completion, Reports, Administration, Attachments, and Account Privacy
+
+| ID | Steps | Expected result | Result |
+|---|---|---|---|
+| COMPLETION-01 | Start an assigned gig as its owner and request completion. | Each accepted participant gets one pending completion record and notification. Repeating the request creates no duplicate. | |
+| COMPLETION-02 | As every required participant, acknowledge the completion. | The final acknowledgement marks the gig Completed. Unauthorized users cannot view or change the records. | |
+| COMPLETION-03 | On a separate active project, dispute a completion request. | The record becomes Disputed and the project is not silently completed. | |
+| REPORT-01 | Report a user, gig, project, proposal, or message from its available action. | One confidential report is created and is visible to its reporter under Reports. | |
+| REPORT-02 | As a scoped moderator, open the moderation queue and resolve the report. | Resolution and any selected restriction/suspension are audited; the reporter receives a safe status notification. | |
+| ADMIN-01 | Sign in as a non-admin and directly open an `/admin` URL. | Administrative data and actions are denied. | |
+| ADMIN-02 | As a scoped admin, list/suspend/reinstate a disposable account and edit disposable reference data. | Only granted actions work; suspension revokes that user's active sessions; changes survive refresh. | |
+| ATTACH-01 | Send a valid PNG/JPEG smaller than 80 KiB in a participant conversation. | It appears once and only conversation participants can retrieve it. | |
+| ATTACH-02 | Try SVG/HTML, a renamed non-image, an image over 80 KiB, or more than three images. | Upload is rejected without storing active content or exposing internal errors. | |
+| ACCOUNT-01 | Schedule deletion using the current password and exact confirmation phrase. | All sessions are revoked and the account enters a 30-day deletion-pending window. | |
+| ACCOUNT-02 | Recover the account from the login page during the window. | Correct credentials restore the account; incorrect credentials reveal no sensitive detail. | |
+
+## M. Ownership and Authorization — Two-User Security Test
 
 These tests are mandatory. They confirm that one user cannot control another user's data.
 
@@ -314,7 +330,7 @@ These tests are mandatory. They confirm that one user cannot control another use
 | SECURITY-09 | Check creation/edit forms for an owner/user-ID field. | The website never asks the user to choose who owns the resource. Ownership comes from the signed-in account. | |
 | SECURITY-10 | Use User B to attempt an action after User A has archived/closed the resource. | The server follows the real current status and refuses an invalid old action. | |
 
-## M. Data Accuracy, Refresh, and Multiple Tabs
+## N. Data Accuracy, Refresh, and Multiple Tabs
 
 | ID | Steps | Expected result | Result |
 |---|---|---|---|
@@ -325,7 +341,7 @@ These tests are mandatory. They confirm that one user cannot control another use
 | DATA-05 | Use leading/trailing spaces in a title or skill. | The saved value is clean and does not create misleading duplicates. | |
 | DATA-06 | Enter ordinary punctuation in descriptions and names. | Valid text displays correctly and does not damage the page layout. | |
 
-## N. Error Messages and Recovery
+## O. Error Messages and Recovery
 
 | ID | Steps | Expected result | Result |
 |---|---|---|---|
@@ -336,7 +352,7 @@ These tests are mandatory. They confirm that one user cannot control another use
 | ERROR-05 | Trigger any forbidden action during the security tests. | The message is understandable and does not show stack traces, database text, secret values, or file paths. | |
 | ERROR-06 | Select an action and wait during a slow connection. | The action shows progress and does not encourage repeated accidental submissions. | |
 
-## O. Mobile, Visual Quality, and Accessibility
+## P. Mobile, Visual Quality, and Accessibility
 
 Repeat these checks on the home page, gig list/details, profile, My Gigs, proposal form, project list/details, and project management.
 
@@ -353,7 +369,7 @@ Repeat these checks on the home page, gig list/details, profile, My Gigs, propos
 | UI-09 | Check all forms. | Every input has a visible, understandable label; required information and errors are clear. | |
 | UI-10 | Open every major page and watch for visual inconsistency. | Colors, spacing, typography, cards, buttons, alerts, and dialogs look consistent and professional. | |
 
-## P. Basic Cross-Browser Test
+## Q. Basic Cross-Browser Test
 
 | ID | Steps | Expected result | Result |
 |---|---|---|---|

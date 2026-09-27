@@ -6,6 +6,10 @@ import {
   LayoutDashboard,
   MailCheck,
   Bell,
+  ClipboardCheck,
+  Flag,
+  ShieldCheck,
+  Settings,
   MessagesSquare,
   Menu,
   Search,
@@ -18,6 +22,7 @@ import { NavLink } from "react-router-dom";
 import { Logo } from "../components/Logo.jsx";
 import { UserMenu } from "../components/navigation/UserMenu.jsx";
 import { NotificationBell } from "../components/notifications/NotificationBell.jsx";
+import { useAuth } from "../context/auth-context.js";
 
 const links = [
   { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
@@ -31,14 +36,22 @@ const links = [
     label: "Join requests",
     icon: UserPlus,
   },
+  { to: "/dashboard/reports", label: "Reports", icon: Flag },
   { to: "/dashboard/invitations", label: "Invitations", icon: MailCheck },
   { to: "/dashboard/messages", label: "Messages", icon: MessagesSquare },
   { to: "/dashboard/notifications", label: "Notifications", icon: Bell },
+  {
+    to: "/dashboard/completions",
+    label: "Completions",
+    icon: ClipboardCheck,
+  },
   { to: "/dashboard/bookmarks", label: "Bookmarks", icon: Bookmark },
   { to: "/dashboard/profile", label: "Profile", icon: UserRound },
+  { to: "/dashboard/account", label: "Account settings", icon: Settings },
 ];
 
 export function AppShell({ children }) {
+  const { user } = useAuth();
   const [open, setOpen] = useState(false);
   return (
     <div className="flex h-screen min-h-0 flex-col overflow-hidden bg-slate-50">
@@ -65,7 +78,23 @@ export function AppShell({ children }) {
           className={`${open ? "block overflow-y-auto" : "hidden"} border-b border-slate-200 bg-white p-4 lg:block lg:min-h-0 lg:overflow-y-auto lg:border-b-0 lg:border-r`}
         >
           <nav className="space-y-1">
-            {links.map(({ to, label, icon: Icon }) => (
+            {[
+              ...links,
+              ...(user?.isAdmin
+                ? [
+                    {
+                      to: "/dashboard/admin",
+                      label: "Administration",
+                      icon: Settings,
+                    },
+                    {
+                      to: "/dashboard/admin/moderation",
+                      label: "Moderation",
+                      icon: ShieldCheck,
+                    },
+                  ]
+                : []),
+            ].map(({ to, label, icon: Icon }) => (
               <NavLink
                 key={to}
                 to={to}

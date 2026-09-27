@@ -23,6 +23,11 @@ import { createParticipationService } from "./modules/participation/participatio
 import { createMessagingService } from "./modules/messaging/messaging.service.js";
 import { createNotificationService } from "./modules/notifications/notification.service.js";
 import { createNotificationWriter } from "./modules/notifications/notification.writer.js";
+import { createCompletionService } from "./modules/completion/completion.service.js";
+import { createModerationService } from "./modules/moderation/moderation.service.js";
+import { createAccountService } from "./modules/users/account.service.js";
+import { createFileService } from "./modules/files/file.service.js";
+import { createAdminService } from "./modules/admin/admin.service.js";
 
 export function createApp({
   config,
@@ -38,6 +43,11 @@ export function createApp({
   participationService: participationServiceOverride,
   messagingService: messagingServiceOverride,
   notificationService: notificationServiceOverride,
+  completionService: completionServiceOverride,
+  moderationService: moderationServiceOverride,
+  accountService: accountServiceOverride,
+  fileService: fileServiceOverride,
+  adminService: adminServiceOverride,
 }) {
   const app = express();
   const emailService =
@@ -56,11 +66,20 @@ export function createApp({
   const participationService =
     participationServiceOverride ??
     createParticipationService({ config, notificationWriter });
+  const fileService = fileServiceOverride ?? createFileService();
   const messagingService =
     messagingServiceOverride ??
-    createMessagingService({ config, notificationWriter });
+    createMessagingService({ config, notificationWriter, fileService });
   const notificationService =
     notificationServiceOverride ?? createNotificationService({ config });
+  const completionService =
+    completionServiceOverride ??
+    createCompletionService({ notificationWriter });
+  const moderationService =
+    moderationServiceOverride ??
+    createModerationService({ notificationWriter });
+  const accountService = accountServiceOverride ?? createAccountService();
+  const adminService = adminServiceOverride ?? createAdminService();
   app.disable("x-powered-by");
   app.set("trust proxy", config.trustProxy);
   app.use(requestContext);
@@ -147,6 +166,11 @@ export function createApp({
       participationService,
       messagingService,
       notificationService,
+      completionService,
+      moderationService,
+      accountService,
+      fileService,
+      adminService,
     }),
   );
   app.use(notFoundHandler);

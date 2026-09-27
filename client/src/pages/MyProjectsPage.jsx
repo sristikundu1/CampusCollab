@@ -31,17 +31,24 @@ export function MyProjectsPage() {
           </Link>
         </div>
         <div className="mt-6 flex flex-wrap gap-2">
-          {["", "DRAFT", "RECRUITING", "ACTIVE", "CANCELLED", "ARCHIVED"].map(
-            (s) => (
-              <button
-                key={s || "ALL"}
-                onClick={() => setStatus(s)}
-                className={`rounded-full px-4 py-2 text-sm font-bold ${status === s ? "bg-indigo-600 text-white" : "border border-slate-200 bg-white text-slate-600"}`}
-              >
-                {s || "ALL"}
-              </button>
-            ),
-          )}
+          {[
+            "",
+            "DRAFT",
+            "RECRUITING",
+            "ACTIVE",
+            "COMPLETION_PENDING",
+            "COMPLETED",
+            "CANCELLED",
+            "ARCHIVED",
+          ].map((s) => (
+            <button
+              key={s || "ALL"}
+              onClick={() => setStatus(s)}
+              className={`rounded-full px-4 py-2 text-sm font-bold ${status === s ? "bg-indigo-600 text-white" : "border border-slate-200 bg-white text-slate-600"}`}
+            >
+              {s || "ALL"}
+            </button>
+          ))}
         </div>
         {error ? (
           <p className="mt-6 rounded-xl bg-rose-50 p-4 text-rose-700">

@@ -8,6 +8,11 @@ import { createProjectRouter } from "../modules/projects/project.routes.js";
 import { createParticipationRouter } from "../modules/participation/participation.routes.js";
 import { createMessagingRouter } from "../modules/messaging/messaging.routes.js";
 import { createNotificationRouter } from "../modules/notifications/notification.routes.js";
+import { createCompletionRouter } from "../modules/completion/completion.routes.js";
+import { createModerationRouter } from "../modules/moderation/moderation.routes.js";
+import { createAccountRouter } from "../modules/users/account.routes.js";
+import { createFileRouter } from "../modules/files/file.routes.js";
+import { createAdminRouter } from "../modules/admin/admin.routes.js";
 
 export function createV1Router(dependencies) {
   const router = Router();
@@ -26,5 +31,10 @@ export function createV1Router(dependencies) {
   router.use(createParticipationRouter(dependencies));
   router.use(createMessagingRouter(dependencies));
   router.use(createNotificationRouter(dependencies));
+  router.use(createCompletionRouter(dependencies));
+  router.use(createModerationRouter(dependencies));
+  router.use(createAccountRouter(dependencies));
+  router.use(createFileRouter(dependencies));
+  router.use(createAdminRouter(dependencies));
   return router;
 }

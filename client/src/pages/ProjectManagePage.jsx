@@ -1,6 +1,7 @@
 import {
   Archive,
   Check,
+  ClipboardCheck,
   PauseCircle,
   Pencil,
   PlayCircle,
@@ -15,7 +16,12 @@ import { Link, useNavigate, useParams } from "react-router-dom";
 import { useToast } from "../context/toast-context.js";
 import { AppShell } from "../layouts/AppShell.jsx";
 import { confirmAction } from "../lib/confirm-action.js";
-import { apiError, participationApi, projectApi } from "../services/api.js";
+import {
+  apiError,
+  completionApi,
+  participationApi,
+  projectApi,
+} from "../services/api.js";
 export function ProjectManagePage() {
   const { projectId } = useParams(),
     navigate = useNavigate(),
@@ -212,6 +218,22 @@ export function ProjectManagePage() {
             >
               <PlayCircle size={16} />
               Start project
+            </button>
+          )}
+          {project.status === "ACTIVE" && (
+            <button
+              className="btn-primary"
+              disabled={busy}
+              onClick={() =>
+                action(
+                  "Request completion",
+                  () => completionApi.request("PROJECT", project.id),
+                  "Every active member will be asked to confirm the completed work.",
+                )
+              }
+            >
+              <ClipboardCheck size={16} />
+              Request completion
             </button>
           )}
           {["RECRUITING", "ACTIVE"].includes(project.status) && (

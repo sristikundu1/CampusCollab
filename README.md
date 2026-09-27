@@ -52,6 +52,21 @@ The application is organized as a React single-page application and a modular Ex
 - Open safe server-generated links to the related proposal, project, participation inbox, or conversation
 - Avoid duplicate notices when idempotent commands are retried or message history is polled
 
+### Completion and trust
+
+- Let a gig or project owner request completion after work starts
+- Require every accepted participant to acknowledge or dispute completion
+- Finalize the parent gig/project only after all required acknowledgements
+- Report users, gigs, projects, proposals, or messages through a confidential workflow
+- Give scoped administrators a moderation queue, resolution actions, user suspension, and reference-data management
+
+### Privacy and attachments
+
+- Schedule account deletion with a 30-day recovery window and immediate session revocation
+- Recover a deletion-pending account by confirming its credentials
+- Attach up to three small PNG/JPEG images to a message without a paid storage provider
+- Restrict attachment delivery to conversation participants and prevent active SVG/HTML content
+
 ### Platform foundations
 
 - Responsive React interface with protected and public routes
@@ -90,6 +105,9 @@ flowchart LR
     M --> PROJECT
     M --> MESSAGE
     M --> NOTIFICATION
+    M --> COMPLETION
+    M --> MODERATION
+    M --> ADMIN
 
     subgraph MODULES[Modular monolith]
       AUTH[Auth]
@@ -98,6 +116,9 @@ flowchart LR
       PROJECT[Projects and participation]
       MESSAGE[Messaging]
       NOTIFICATION[Notifications]
+      COMPLETION[Completion records]
+      MODERATION[Reports and moderation]
+      ADMIN[Scoped administration]
     end
 
     AUTH --> DB[(MongoDB)]
@@ -106,6 +127,9 @@ flowchart LR
     PROJECT --> DB
     MESSAGE --> DB
     NOTIFICATION --> DB
+    COMPLETION --> DB
+    MODERATION --> DB
+    ADMIN --> DB
     AUTH --> EMAIL[Brevo Transactional Email API]
 ```
 
@@ -307,7 +331,7 @@ Open <http://localhost:5173>.
 | `API_URL` | `http://localhost:5000` | Public backend origin |
 | `REQUIRE_EMAIL_VERIFICATION` | `true` | Mandatory; cannot be disabled |
 
-Brevo settings are required in local development and production because registration requires a 6-digit inbox verification code. Cloudinary variables are reserved for later upload work and are not used by the current application. See [the environment guide](docs/setup/environment-variables.md) for the complete reference.
+Brevo settings are required in local development and production because registration requires a 6-digit inbox verification code. No domain purchase, SMTP server, Redis service, or Cloudinary account is required for this portfolio deployment. Small message images are stored privately in MongoDB under strict size/type limits. See [the environment guide](docs/setup/environment-variables.md) for the complete reference.
 
 ## Main user flows
 
@@ -326,6 +350,30 @@ Brevo settings are required in local development and production because registra
 3. Students request to join an opening, or the owner sends an invitation.
 4. Both sides track actions through their join-request or invitation inbox.
 5. Accepted participants appear in project membership management.
+
+### Completion flow
+
+1. The owner starts an assigned gig or active project, then requests completion.
+2. Every accepted proposal owner or active project member receives a completion record.
+3. Participants acknowledge the result or open a dispute from **Dashboard → Completions**.
+4. The gig/project becomes Completed only after every required participant acknowledges it.
+
+### Reporting and account safety
+
+1. A signed-in user reports content from its details/profile page and tracks it under **Reports**.
+2. A scoped administrator reviews and resolves reports from **Admin → Moderation** without exposing reporter details publicly.
+3. Users can schedule deletion from **Account settings**; all sessions are revoked immediately.
+4. During the 30-day window, the user can restore the account from the login page.
+
+### Create the first administrator
+
+Register and verify the intended administrator normally. Then run this once from `server/` against the intended database:
+
+```bash
+npm run admin:grant -- --email=verified-admin@example.edu --confirm=GRANT_ADMIN
+```
+
+The script refuses missing/inactive users and requires the explicit confirmation phrase. Sign out and back in after granting access. Never use it with an email you do not control.
 
 ## Available commands
 
@@ -351,6 +399,7 @@ Brevo settings are required in local development and production because registra
 | `npm run db:verify-indexes` | Verify database indexes against MongoDB |
 | `npm run db:seed:uiu` | Seed UIU university/domain reference data |
 | `npm run db:seed:skills` | Seed the canonical skills catalog |
+| `npm run admin:grant -- --email=... --confirm=GRANT_ADMIN` | Grant the first verified user scoped administrator permissions |
 
 ## Troubleshooting
 
@@ -405,6 +454,8 @@ npm run format:check
 
 Manual acceptance cases are available in [docs/testing/manual-user-acceptance-test-cases.md](docs/testing/manual-user-acceptance-test-cases.md).
 
+The MVP intentionally defers payment processing, AI matching, realtime WebSockets, and public ratings/reviews. These are not required for the current portfolio release.
+
 ## Deployment
 
 The client and server deploy as separate Vercel projects. Browser requests use the same-origin `/api/v1` path, and `client/vercel.json` proxies `/api/*` to the backend. This is required so authentication cookies remain first-party in incognito mode and in browsers that block third-party cookies.
@@ -434,6 +485,7 @@ Production URLs must use HTTPS. If the backend domain changes, update the proxy 
 - [Environment configuration](docs/setup/environment-variables.md)
 - [OpenAPI specification](docs/openapi/phase-5-foundation.yaml)
 - [Manual acceptance tests](docs/testing/manual-user-acceptance-test-cases.md)
+- [MVP completion audit](docs/audits/mvp-completion-audit.md)
 
 ## Security notes
 

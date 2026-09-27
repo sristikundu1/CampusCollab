@@ -70,6 +70,14 @@ export function LoginPage() {
             {location.state.registrationMessage}
           </p>
         )}
+        {location.state?.message && (
+          <p
+            className="rounded-xl bg-emerald-50 p-3 text-sm text-emerald-700"
+            role="status"
+          >
+            {location.state.message}
+          </p>
+        )}
         <FormField
           label="University email"
           type="email"
@@ -120,6 +128,15 @@ export function LoginPage() {
             className="font-semibold text-brand-600 hover:underline"
           >
             Create an account
+          </Link>
+        </p>
+        <p className="text-center text-sm text-slate-600">
+          Scheduled account deletion?{" "}
+          <Link
+            to="/recover-account"
+            className="font-semibold text-brand-600 hover:underline"
+          >
+            Recover your account
           </Link>
         </p>
       </form>

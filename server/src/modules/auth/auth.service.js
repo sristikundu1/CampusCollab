@@ -35,6 +35,7 @@ function publicUser(user, profile, affiliation) {
     email: user.email,
     status: user.status,
     capabilities: user.capabilities,
+    isAdmin: user.capabilities?.includes("ADMIN") ?? false,
     profile: profile
       ? {
           displayName: profile.displayName,

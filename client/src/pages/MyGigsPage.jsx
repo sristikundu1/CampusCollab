@@ -3,6 +3,7 @@ import {
   Archive,
   CircleStop,
   Clock3,
+  ClipboardCheck,
   Eye,
   FileText,
   Pencil,
@@ -19,7 +20,7 @@ import { useToast } from "../context/toast-context.js";
 import { AppShell } from "../layouts/AppShell.jsx";
 import { confirmAction } from "../lib/confirm-action.js";
 import { clearPendingGig, readPendingGig } from "../lib/pending-gig.js";
-import { apiError, gigApi } from "../services/api.js";
+import { apiError, completionApi, gigApi } from "../services/api.js";
 
 const confirmation = {
   publish: {
@@ -63,6 +64,9 @@ const statusFilters = [
   "DRAFT",
   "PUBLISHED",
   "ASSIGNED",
+  "ACTIVE",
+  "COMPLETION_PENDING",
+  "COMPLETED",
   "PENDING",
   "CLOSED",
   "ARCHIVED",
@@ -101,7 +105,11 @@ export function MyGigsPage() {
       }
       try {
         const response = await gigApi.mine({
-          ...(status ? { view: status } : {}),
+          ...(status
+            ? ["ACTIVE", "COMPLETION_PENDING", "COMPLETED"].includes(status)
+              ? { status }
+              : { view: status }
+            : {}),
           ...(cursor ? { cursor } : {}),
         });
         if (requestId !== requestSequence.current) return;
@@ -191,6 +199,28 @@ export function MyGigsPage() {
     }
   };
 
+  const requestCompletion = async (gig) => {
+    if (
+      !(await confirmAction({
+        title: "Request completion?",
+        text: "Every accepted participant will be asked to confirm the completed work.",
+        confirmText: "Request completion",
+        icon: "question",
+      }))
+    )
+      return;
+    setBusy(gig.id);
+    try {
+      await completionApi.request("GIG", gig.id);
+      notify("Completion requested from all participants.");
+      await load();
+    } catch (reason) {
+      notify(apiError(reason).message, "error");
+    } finally {
+      setBusy("");
+    }
+  };
+
   const actions = (gig) => (
     <>
       {gig.proposalCount > 0 && (
@@ -227,6 +257,15 @@ export function MyGigsPage() {
           }
         >
           <CircleStop size={14} /> Close
+        </button>
+      )}
+      {gig.status === "ACTIVE" && (
+        <button
+          disabled={busy === gig.id}
+          className={`${actionClass} border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100`}
+          onClick={() => requestCompletion(gig)}
+        >
+          <ClipboardCheck size={14} /> Request completion
         </button>
       )}
       {["DRAFT", "CLOSED", "CANCELLED", "COMPLETED"].includes(gig.status) && (

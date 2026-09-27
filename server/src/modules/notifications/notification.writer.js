@@ -49,6 +49,22 @@ const content = Object.freeze({
     title: "New message",
     preview: "You have a new message.",
   },
+  COMPLETION_REQUESTED: {
+    title: "Completion confirmation requested",
+    preview: "An owner asked you to confirm that your work is complete.",
+  },
+  COMPLETION_ACKNOWLEDGED: {
+    title: "Completion confirmed",
+    preview: "A participant confirmed that their work is complete.",
+  },
+  COMPLETION_DISPUTED: {
+    title: "Completion disputed",
+    preview: "A participant disputed a completion request.",
+  },
+  REPORT_RESOLVED: {
+    title: "Report reviewed",
+    preview: "The moderation team reviewed your report.",
+  },
 });
 
 export function createNotificationWriter({

@@ -8,6 +8,7 @@ import {
   CircleStop,
   Clock3,
   FileText,
+  Flag,
   MapPin,
   Pencil,
   Rocket,
@@ -364,6 +365,14 @@ export function GigDetailsPage() {
                 <p className="mt-4 whitespace-pre-wrap text-base leading-8 text-slate-600">
                   {gig.description}
                 </p>
+                {!gig.isOwner && (
+                  <Link
+                    className="mt-5 inline-flex items-center gap-2 text-sm font-bold text-rose-700 hover:underline"
+                    to={`/dashboard/reports?targetType=GIG&targetId=${gig.id}`}
+                  >
+                    <Flag size={15} /> Report this gig
+                  </Link>
+                )}
               </section>
               <section className="mt-9 border-t border-slate-100 pt-8">
                 <h2 className="text-xl font-black text-slate-950">

@@ -3,6 +3,7 @@ import {
   Briefcase,
   Clock3,
   GraduationCap,
+  Flag,
   ShieldCheck,
 } from "lucide-react";
 import { useEffect, useState } from "react";
@@ -118,6 +119,12 @@ export function PublicProfilePage() {
                   </span>
                 )}
               </div>
+              <Link
+                className="mt-4 inline-flex items-center gap-2 text-sm font-bold text-rose-700 hover:underline"
+                to={`/dashboard/reports?targetType=USER&targetId=${userId}`}
+              >
+                <Flag size={15} /> Report this profile
+              </Link>
             </div>
           </div>
         </section>

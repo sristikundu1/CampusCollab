@@ -26,6 +26,7 @@
     "test:integration:notifications": "node scripts/verify-notification-database.js",
     "db:seed:uiu": "node scripts/seed-uiu.js",
     "db:seed:skills": "node scripts/seed-skills.js",
+    "admin:grant": "node scripts/grant-admin.js",
     "db:migrate:test": "node scripts/migrate-test-database.js"
   },
   "dependencies": {

@@ -219,3 +219,77 @@ export const notificationApi = {
     api.patch(`/notifications/${notificationId}/read`),
   markAllRead: () => api.patch("/notifications/read-all"),
 };
+
+export const completionApi = {
+  list: (params = {}) => api.get("/completion-records", { params }),
+  get: (recordId) => api.get(`/completion-records/${recordId}`),
+  request: (contextType, contextId, summary) =>
+    api.post(
+      "/completion-records",
+      { contextType, contextId, ...(summary ? { summary } : {}) },
+      idempotent(),
+    ),
+  respond: (recordId, decision, note) =>
+    api.post(
+      `/completion-records/${recordId}:respond`,
+      { decision, ...(note ? { note } : {}) },
+      idempotent(),
+    ),
+};
+
+export const reportApi = {
+  create: (body) => api.post("/reports", body, idempotent()),
+  mine: (params = {}) => api.get("/reports/mine", { params }),
+  get: (reportId) => api.get(`/reports/${reportId}`),
+  adminList: (params = {}) => api.get("/admin/reports", { params }),
+  adminGet: (reportId) => api.get(`/admin/reports/${reportId}`),
+  resolve: (reportId, body) =>
+    api.post(`/admin/reports/${reportId}:resolve`, body, idempotent()),
+};
+
+export const accountApi = {
+  requestDeletion: (password, confirmation) =>
+    api.post(
+      "/users/me/account-deletion",
+      { password, confirmation },
+      idempotent(),
+    ),
+  cancelDeletion: (email, password) =>
+    api.post(
+      "/users/me/account-deletion:cancel",
+      { email, password },
+      idempotent(),
+    ),
+};
+
+export const attachmentApi = {
+  uploadMessage: (conversationId, fileName, mediaType, dataBase64) =>
+    api.post("/attachments/messages", {
+      conversationId,
+      fileName,
+      mediaType,
+      dataBase64,
+    }),
+  remove: (attachmentId) => api.delete(`/attachments/${attachmentId}`),
+};
+
+export const adminApi = {
+  users: (params = {}) => api.get("/admin/users", { params }),
+  suspendUser: (userId, body) =>
+    api.post(`/admin/users/${userId}:suspend`, body, idempotent()),
+  reinstateUser: (userId, body) =>
+    api.post(`/admin/users/${userId}:reinstate`, body, idempotent()),
+  skills: (params = {}) => api.get("/admin/skills", { params }),
+  createSkill: (body) => api.post("/admin/skills", body, idempotent()),
+  updateSkill: (skillId, body) =>
+    api.patch(`/admin/skills/${skillId}`, body, idempotent()),
+  universities: (params = {}) => api.get("/admin/universities", { params }),
+  createUniversity: (body) =>
+    api.post("/admin/universities", body, idempotent()),
+  updateUniversity: (universityId, body) =>
+    api.patch(`/admin/universities/${universityId}`, body, idempotent()),
+  createDomain: (universityId, body) =>
+    api.post(`/admin/universities/${universityId}/domains`, body, idempotent()),
+  updateDomain: (domainId, body) =>
+    api.patch(`/admin/university-domains/${domainId}`, body, idempotent()),
+};

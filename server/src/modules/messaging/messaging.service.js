@@ -12,6 +12,8 @@ import { Project } from "../projects/project.model.js";
 import { Proposal } from "../proposals/proposal.model.js";
 import { Conversation } from "./conversation.model.js";
 import { Message } from "./message.model.js";
+import { Attachment } from "../files/attachment.model.js";
+import { attachmentMetadata } from "../files/file.service.js";
 
 const q = async (query, { session, lean = false, select } = {}) => {
   let value = query;
@@ -31,6 +33,8 @@ export function createMessagingService({
   ProposalModel = Proposal,
   GigModel = Gig,
   ProfileModel = Profile,
+  AttachmentModel = Attachment,
+  fileService = null,
   notificationWriter = null,
   transaction = withTransaction,
 } = {}) {
@@ -278,7 +282,12 @@ export function createMessagingService({
     return serializeConversation(conversation, userId, unreadCount);
   }
 
-  const serializeMessage = (message, profileMap, viewerId) => {
+  const serializeMessage = (
+    message,
+    profileMap,
+    viewerId,
+    attachmentMap = new Map(),
+  ) => {
     const profile = profileMap.get(String(message.senderId));
     return {
       id: String(message._id),
@@ -289,10 +298,33 @@ export function createMessagingService({
         avatarUrl: profile?.avatarUrl ?? null,
       },
       body: message.body,
+      attachments: (message.attachmentIds ?? [])
+        .map((id) => attachmentMap.get(String(id)))
+        .filter(Boolean),
       sentAt: message.sentAt,
       isOwn: sameId(message.senderId, viewerId),
     };
   };
+
+  async function attachmentsFor(messages) {
+    const ids = [
+      ...new Set(
+        messages.flatMap((message) => message.attachmentIds ?? []).map(String),
+      ),
+    ];
+    if (!ids.length) return new Map();
+    const items = await q(
+      AttachmentModel.find({
+        _id: { $in: ids },
+        status: "AVAILABLE",
+        scanStatus: "CLEAN",
+      }).select("+originalFileName"),
+      { lean: true },
+    );
+    return new Map(
+      items.map((item) => [String(item._id), attachmentMetadata(item)]),
+    );
+  }
 
   async function messages(userId, conversationId, input) {
     const conversation = await q(ConversationModel.findById(conversationId));
@@ -325,9 +357,12 @@ export function createMessagingService({
     const profileMap = await profilesFor([
       ...new Set(selected.map((message) => String(message.senderId))),
     ]);
+    const attachmentMap = await attachmentsFor(selected);
     return {
       messages: selected
-        .map((message) => serializeMessage(message, profileMap, userId))
+        .map((message) =>
+          serializeMessage(message, profileMap, userId, attachmentMap),
+        )
         .reverse(),
       hasMore,
       nextCursor:
@@ -343,6 +378,7 @@ export function createMessagingService({
 
   async function send(userId, conversationId, input) {
     let messageId;
+    const attachmentIds = input.attachmentIds ?? [];
     await transaction(async (session) => {
       const conversation = await q(ConversationModel.findById(conversationId), {
         session,
@@ -361,6 +397,12 @@ export function createMessagingService({
         messageId = duplicate._id;
         return;
       }
+      const attachments = await fileService?.assertMessageAttachments(
+        userId,
+        conversationId,
+        attachmentIds,
+        session,
+      );
       const now = new Date();
       const [message] = await MessageModel.create(
         [
@@ -368,8 +410,9 @@ export function createMessagingService({
             conversationId,
             senderId: userId,
             clientMessageId: input.clientMessageId,
-            messageType: "TEXT",
+            messageType: input.body ? "TEXT" : "ATTACHMENT",
             body: input.body,
+            attachmentIds,
             sentAt: now,
           },
         ],
@@ -381,7 +424,8 @@ export function createMessagingService({
           $set: {
             lastMessageId: message._id,
             lastMessageAt: now,
-            lastMessagePreview: input.body.slice(0, 160),
+            lastMessagePreview:
+              input.body?.slice(0, 160) ?? "Shared an image attachment",
             "participants.$[sender].lastReadAt": now,
             "participants.$[sender].lastReadMessageId": message._id,
           },
@@ -393,6 +437,16 @@ export function createMessagingService({
         throw new ConflictError(
           "CONVERSATION_CHANGED",
           "The conversation changed. Refresh and try again.",
+        );
+      if (attachments?.length)
+        await AttachmentModel.updateMany(
+          {
+            _id: { $in: attachments.map((item) => item._id) },
+            uploaderId: userId,
+            parentId: { $exists: false },
+          },
+          { $set: { parentId: message._id }, $inc: { version: 1 } },
+          { session, runValidators: true },
         );
       for (const participant of conversation.participants) {
         if (
@@ -418,7 +472,8 @@ export function createMessagingService({
       select: "+body",
     });
     const profileMap = await profilesFor([message.senderId]);
-    return serializeMessage(message, profileMap, userId);
+    const attachmentMap = await attachmentsFor([message]);
+    return serializeMessage(message, profileMap, userId, attachmentMap);
   }
 
   async function markRead(userId, conversationId, messageId) {

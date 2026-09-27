@@ -28,9 +28,6 @@ These values describe runtime behavior and may appear in deployment configuratio
 | `SESSION_TTL_DAYS` | Maximum session lifetime before renewal/re-authentication. | Product/security policy. | Yes | Yes | Proposed MVP default is 30; production may shorten after risk review. |
 | `EMAIL_FROM` | Verified sender email displayed on CampusCollab mail. | Add and verify a sender in Brevo. | Yes | Usually safe | Must exactly match a verified Brevo sender. |
 | `EMAIL_FROM_NAME` | Human-readable sender name. | Choose a recognizable label. | Yes | Yes | Defaults to `CampusCollab`. |
-| `CLOUDINARY_CLOUD_NAME` | Public Cloudinary account namespace. | Cloudinary dashboard. | Yes | Generally safe, but do not confuse it with credentials | Use separate development and production accounts/folders when possible. |
-| `CLOUDINARY_FOLDER` | Namespace for uploaded CampusCollab objects. | Choose a folder name. | Yes | Yes | Separate environments, for example provider-side folders, to avoid mixed data. |
-| `MAX_UPLOAD_BYTES` | Server-side upper bound for an individual upload. | Security/product policy. | Yes | Yes | Proposed placeholder is 10 MiB; the attachment policy remains an approval item. |
 
 ### SECRET CONFIGURATION
 
@@ -42,8 +39,6 @@ Store these in local `.env`, a CI secret store, and the production platform's se
 | `SESSION_SECRET` | Cryptographic secret for signing/deriving opaque session security material. | Generate outside source control with an OS password/secret generator using cryptographically secure randomness; target at least 32 random bytes. | Yes | **Never** | Use a different value per environment. Rotation needs a planned invalidation or key-ring migration. |
 | `CSRF_SECRET` | Independent key for CSRF token integrity. | Generate independently using the same secure process. Do not reuse `SESSION_SECRET`. | Yes | **Never** | Rotation can invalidate outstanding CSRF tokens; deploy deliberately. |
 | `BREVO_API_KEY` | Authorizes CampusCollab to send transactional email through Brevo's HTTPS API. | Create an API key in Brevo under SMTP & API. | Yes | **Never** | Use separate development and production keys; rotate immediately if exposed. |
-| `CLOUDINARY_API_KEY` | Cloudinary API account identifier used by the backend. | Cloudinary dashboard. | Yes | **Never** as a project rule | Server-side only. Use restricted/environment-specific credentials. |
-| `CLOUDINARY_API_SECRET` | Secret authorizing Cloudinary signing and management calls. | Cloudinary dashboard. | Yes | **Never** | Never expose to React. Rotate immediately if leaked. |
 
 ## 2. Mandatory manual setup
 
@@ -73,9 +68,9 @@ Generate two different cryptographically random values outside the repository. A
 
 Create a Brevo account and API key, then add and verify the exact sender address used by `EMAIL_FROM`. A custom domain is not required for this portfolio deployment; Brevo may rewrite a free-address sender to a compliant Brevo-managed address. Email is required for university verification and password reset. CampusCollab uses Brevo's HTTPS API and does not require SMTP credentials.
 
-### 2.4 Cloudinary/object storage
+### 2.4 Message image storage
 
-File uploads are not implemented in the current application. Do not provision Cloudinary for this stabilization phase. Revisit storage credentials, upload limits, signed delivery, deletion, and malware scanning only when file uploads become an approved feature.
+No Cloudinary or paid object-storage account is required. The MVP accepts message-only PNG/JPEG attachments, verifies their file signatures, limits each file to 80 KiB and each message to three images, and stores the bytes in MongoDB. Files are served only to authenticated conversation participants with private/no-store and content-sniffing protections. This intentionally small portfolio-friendly design is not a substitute for object storage and malware scanning at larger scale.
 
 ### 2.5 Redis
 
@@ -115,7 +110,7 @@ The Git repository intentionally contains no real `.env` file. Each developer cr
 - [ ] MongoDB deployment, least-privilege user, network controls, TLS, backups, and `MONGODB_URI` configured
 - [ ] Independent `SESSION_SECRET` and `CSRF_SECRET` generated securely
 - [ ] Email provider credentials and verified `EMAIL_FROM` configured
-- [ ] Cloudinary configuration reviewed if file uploads are enabled in a future release
+- [ ] MongoDB capacity and backups account for tightly limited message attachments
 - [ ] Shared rate-limit storage designed before scaling the backend across multiple instances
 - [ ] Production log level and proxy trust configured
 - [ ] Secrets stored in the deployment secret manager, not repository variables

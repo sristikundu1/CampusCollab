@@ -2,6 +2,7 @@ import {
   ArrowLeft,
   CalendarDays,
   CheckCircle2,
+  Flag,
   MessageCircle,
   Send,
   ShieldCheck,
@@ -145,6 +146,14 @@ export function ProjectDetailsPage() {
               <p className="mt-4 whitespace-pre-wrap leading-8 text-slate-600">
                 {project.description}
               </p>
+              {!project.isOwner && isAuthenticated && (
+                <Link
+                  className="mt-5 inline-flex items-center gap-2 text-sm font-bold text-rose-700 hover:underline"
+                  to={`/dashboard/reports?targetType=PROJECT&targetId=${project.id}`}
+                >
+                  <Flag size={15} /> Report this project
+                </Link>
+              )}
               <div className="mt-6 flex flex-wrap gap-2">
                 {project.skills.map((s) => (
                   <span
