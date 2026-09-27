@@ -184,7 +184,7 @@ export function createAuthService({
     async resendVerification(email) {
       const user = await UserModel.findOne({
         email,
-        status: "PENDING_VERIFICATION",
+        status: { $in: ["PENDING_VERIFICATION", "ACTIVE"] },
       });
       if (user) {
         const affiliation = await AffiliationModel.findOne({
@@ -208,7 +208,7 @@ export function createAuthService({
     async verifyEmail({ email, code }) {
       const user = await UserModel.findOne({
         email,
-        status: "PENDING_VERIFICATION",
+        status: { $in: ["PENDING_VERIFICATION", "ACTIVE"] },
       });
       if (!user)
         throw new ConflictError(
@@ -270,7 +270,10 @@ export function createAuthService({
           { session },
         );
         const userUpdate = await UserModel.updateOne(
-          { _id: challenge.userId, status: "PENDING_VERIFICATION" },
+          {
+            _id: challenge.userId,
+            status: { $in: ["PENDING_VERIFICATION", "ACTIVE"] },
+          },
           {
             status: "ACTIVE",
             statusChangedAt: new Date(),

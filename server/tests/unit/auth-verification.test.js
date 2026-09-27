@@ -29,6 +29,7 @@ test("verification codes are always zero-padded six-digit values", () => {
 
 test("a valid code is consumed and activates the verified account", async () => {
   const updates = { challenge: [], affiliation: [], user: [] };
+  const userQueries = [];
   const challenge = {
     _id: "challenge-id",
     userId: "user-id",
@@ -38,7 +39,10 @@ test("a valid code is consumed and activates the verified account", async () => 
   };
   const authService = serviceWith({
     UserModel: {
-      findOne: async () => ({ _id: "user-id" }),
+      findOne: async (filter) => {
+        userQueries.push(filter);
+        return { _id: "user-id", status: "ACTIVE" };
+      },
       updateOne: async (...args) => {
         updates.user.push(args);
         return { modifiedCount: 1 };
@@ -68,6 +72,14 @@ test("a valid code is consumed and activates the verified account", async () => 
   assert.equal(updates.challenge[0][1].status, "CONSUMED");
   assert.equal(updates.affiliation[0][1].status, "VERIFIED");
   assert.equal(updates.affiliation[0][1].verificationMethod, "EMAIL_CODE");
+  assert.deepEqual(userQueries[0].status.$in, [
+    "PENDING_VERIFICATION",
+    "ACTIVE",
+  ]);
+  assert.deepEqual(updates.user[0][0].status.$in, [
+    "PENDING_VERIFICATION",
+    "ACTIVE",
+  ]);
   assert.equal(updates.user[0][1].status, "ACTIVE");
   assert.equal(updates.user[0][2].session, "test-session");
 });
@@ -105,8 +117,14 @@ test("five incorrect attempts revoke the verification challenge", async () => {
 test("resending supersedes prior codes and never persists plaintext", async () => {
   const created = [];
   const sent = [];
+  const userQueries = [];
   const authService = serviceWith({
-    UserModel: { findOne: async () => ({ _id: "user-id" }) },
+    UserModel: {
+      findOne: async (filter) => {
+        userQueries.push(filter);
+        return { _id: "user-id", status: "ACTIVE" };
+      },
+    },
     AffiliationModel: {
       findOne: async () => ({ _id: "affiliation-id" }),
     },
@@ -124,6 +142,10 @@ test("resending supersedes prior codes and never persists plaintext", async () =
 
   assert.equal(result.expiresInSeconds, 600);
   assert.deepEqual(sent[0], ["student@example.edu", "004200", 10]);
+  assert.deepEqual(userQueries[0].status.$in, [
+    "PENDING_VERIFICATION",
+    "ACTIVE",
+  ]);
   assert.equal(created[0].tokenHash, hashOpaqueToken("004200", sessionSecret));
   assert.equal("code" in created[0], false);
   assert.ok(created[0].expiresAt.getTime() - Date.now() <= 600_000);

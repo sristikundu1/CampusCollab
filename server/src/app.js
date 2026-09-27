@@ -81,7 +81,9 @@ export function createApp({
   const accountService = accountServiceOverride ?? createAccountService();
   const adminService = adminServiceOverride ?? createAdminService();
   app.disable("x-powered-by");
-  app.set("trust proxy", config.trustProxy);
+  // Trust only the nearest deployment proxy. Express-rate-limit rejects the
+  // trust-all boolean because it would let callers spoof their client IP.
+  app.set("trust proxy", config.trustProxy ? 1 : false);
   app.use(requestContext);
   app.use(createRequestLogger(logger, config.nodeEnv));
   app.use(helmet());
