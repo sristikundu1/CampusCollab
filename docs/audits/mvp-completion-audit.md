@@ -40,3 +40,13 @@ Public ratings/reviews are left as a future product decision because they need r
 ## Remaining manual gates
 
 Before describing a particular production deployment as fully verified, execute registration email delivery, a two-account gig/project journey, moderator actions with a deliberately provisioned admin, account recovery, attachment authorization, and phone/desktop checks against that deployment. Record results in the manual acceptance document.
+
+## Production deployment evidence
+
+- Backend deployment `dpl_HJz1bCAwsx93RWo7bWHVynYHyie9` reached Vercel `READY` and is aliased to `https://campuscollab-api.vercel.app`.
+- Frontend deployment `dpl_ENZ7qYmwT64WHs5wW4vy8s4wuk7t` reached Vercel `READY` and is aliased to `https://campuscollab-five.vercel.app`.
+- Backend `/health`, `/ready`, and `/api/v1` returned HTTP 200 after deployment.
+- Frontend `/`, `/login`, `/recover-account`, and its same-origin `/api/v1` proxy returned HTTP 200 after deployment.
+- The production login page rendered the recovery link and had no horizontal overflow at the inspected desktop viewport.
+
+Deployment remains `PARTIAL` in the matrix until the authenticated, two-account, email-delivery, admin, and phone-width manual gates above are executed in production.
