@@ -54,6 +54,7 @@ test("concurrent proposal acceptance cannot exceed the gig worker limit", async 
     releaseGigReads = resolve;
   });
   const capacitySelectors = [];
+  const notifications = [];
 
   const ProposalModel = {
     findById: async (id) => clone(proposals.get(String(id))),
@@ -109,6 +110,11 @@ test("concurrent proposal acceptance cannot exceed the gig worker limit", async 
     PortfolioModel: { find: async () => [] },
     AuditModel: null,
     OutboxModel: null,
+    notificationWriter: {
+      async create(value) {
+        notifications.push(value);
+      },
+    },
     transaction: async (work) => work({}),
   });
 
@@ -129,4 +135,12 @@ test("concurrent proposal acceptance cannot exceed the gig worker limit", async 
   assert.equal(capacitySelectors.length, 2);
   for (const selector of capacitySelectors)
     assert.deepEqual(selector.$expr, { $lt: ["$acceptedCount", "$capacity"] });
+  assert.equal(notifications.length, 1);
+  assert.equal(notifications[0].category, "PROPOSAL_ACCEPTED");
+  assert.equal(
+    [FIRST_APPLICANT, SECOND_APPLICANT].includes(
+      String(notifications[0].recipientId),
+    ),
+    true,
+  );
 });

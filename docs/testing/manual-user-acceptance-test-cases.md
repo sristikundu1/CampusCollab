@@ -16,10 +16,11 @@ Manual testing can show that the tested features work in the tested situations. 
 
 Do not report the following as failures unless the development team says they have been enabled:
 
-- University verification email delivery is currently disabled. A valid `@bscse.uiu.ac.bd` account can sign in immediately after registration.
-- Forgot-password and password-reset email delivery are not currently enabled.
+- University email verification is mandatory. Use an email account whose inbox you can access.
+- Email verification and password recovery use the configured Brevo transactional email sender.
 - Profile photo upload is not currently available. User initials are shown as the profile image.
-- Messaging is available for accepted gig engagements and active project teams. It uses persisted history with visibility-aware polling; notification center and administrator screens remain later-phase features.
+- Messaging is available for accepted gig engagements and active project teams. It uses persisted history with visibility-aware polling.
+- The notification center is available for proposal, project participation, membership, and message activity. Browser push and email notifications are intentionally outside this release.
 
 ## What the Tester Needs
 
@@ -75,7 +76,7 @@ Run these cases first. If one fails, do not approve the release until it is inve
 | ID | Check | Expected result | Result |
 |---|---|---|---|
 | QUICK-01 | Open the home page. | The page loads without a blank screen or visible technical error. | |
-| QUICK-02 | Register a new valid UIU account. | Registration succeeds and no verification email is required. | |
+| QUICK-02 | Register a new valid UIU account and enter the emailed verification code. | Registration and mandatory email verification succeed. | |
 | QUICK-03 | Sign in, refresh the page, then sign out. | The user remains signed in after refresh and is signed out after Logout. | |
 | QUICK-04 | Edit the profile and refresh. | Saved information remains visible. | |
 | QUICK-05 | Create and save a gig as a draft. | It appears in My Gigs as Draft and not on the public home page. | |
@@ -110,7 +111,7 @@ Run these cases first. If one fails, do not approve the release until it is inve
 | ID | Steps | Expected result | Result |
 |---|---|---|---|
 | AUTH-01 | Open registration and submit it with all fields empty. | Clear messages identify the required fields. No account is created. | |
-| AUTH-02 | Enter a name, a new valid `@bscse.uiu.ac.bd` address, matching valid passwords, and submit. | The account is created successfully. The user can proceed without email verification. | |
+| AUTH-02 | Enter a name, a new valid `@bscse.uiu.ac.bd` address, matching valid passwords, submit, and enter the emailed code. | The account is created and becomes usable after mandatory email verification. | |
 | AUTH-03 | Try registering with the same email again. | Registration is rejected with a clear message; a duplicate account is not created. | |
 | AUTH-04 | Try registering with a personal email that does not end in `@bscse.uiu.ac.bd`. | Registration is rejected and the allowed university domain is explained. | |
 | AUTH-05 | Enter an incorrectly written email such as `student@`. | A clear email-format error appears. | |
@@ -283,7 +284,20 @@ Use a published/recruiting project owned by User A. Use User B as the prospectiv
 | COLLAB-18 | Close an opening as User A. | New requests/invitations for that opening are no longer accepted. | |
 | COLLAB-19 | Stop recruitment as User A and try joining as User B. | New participation is blocked while existing project data remains readable. | |
 
-## K. Ownership and Authorization — Two-User Security Test
+## K. Messaging and Notifications
+
+| ID | Steps | Expected result | Result |
+|---|---|---|---|
+| NOTICE-01 | Sign in and locate the bell in the header. | The unread badge shows the persisted unread total when activity exists. | |
+| NOTICE-02 | As User B, submit a proposal to User A's gig. Sign in as User A and open Notifications. | One new-proposal notification appears and opens the proposal details. | |
+| NOTICE-03 | As User A, accept or reject User B's proposal. Sign in as User B. | One decision notification appears with no private proposal text in its preview. | |
+| NOTICE-04 | Repeat join-request and invitation submit/decision flows. | The owner, applicant, or invitee receives the appropriate notification; the actor is not notified about their own action. | |
+| NOTICE-05 | Open one unread notification. | It becomes read, the unread badge decreases, and the related authorized page opens. | |
+| NOTICE-06 | Create several unread notifications and select **Mark all as read**. | Every notification belonging to the signed-in user becomes read and the badge reaches zero. | |
+| NOTICE-07 | Send one message from User A to User B, then refresh and leave message polling active. | User B receives one message notification; refreshes and polling do not create duplicates. | |
+| NOTICE-08 | Open Notifications at phone width and desktop width. | Long text wraps, timestamps and actions remain visible, and no horizontal scrollbar appears. | |
+
+## L. Ownership and Authorization — Two-User Security Test
 
 These tests are mandatory. They confirm that one user cannot control another user's data.
 
@@ -300,7 +314,7 @@ These tests are mandatory. They confirm that one user cannot control another use
 | SECURITY-09 | Check creation/edit forms for an owner/user-ID field. | The website never asks the user to choose who owns the resource. Ownership comes from the signed-in account. | |
 | SECURITY-10 | Use User B to attempt an action after User A has archived/closed the resource. | The server follows the real current status and refuses an invalid old action. | |
 
-## L. Data Accuracy, Refresh, and Multiple Tabs
+## M. Data Accuracy, Refresh, and Multiple Tabs
 
 | ID | Steps | Expected result | Result |
 |---|---|---|---|
@@ -311,7 +325,7 @@ These tests are mandatory. They confirm that one user cannot control another use
 | DATA-05 | Use leading/trailing spaces in a title or skill. | The saved value is clean and does not create misleading duplicates. | |
 | DATA-06 | Enter ordinary punctuation in descriptions and names. | Valid text displays correctly and does not damage the page layout. | |
 
-## M. Error Messages and Recovery
+## N. Error Messages and Recovery
 
 | ID | Steps | Expected result | Result |
 |---|---|---|---|
@@ -322,7 +336,7 @@ These tests are mandatory. They confirm that one user cannot control another use
 | ERROR-05 | Trigger any forbidden action during the security tests. | The message is understandable and does not show stack traces, database text, secret values, or file paths. | |
 | ERROR-06 | Select an action and wait during a slow connection. | The action shows progress and does not encourage repeated accidental submissions. | |
 
-## N. Mobile, Visual Quality, and Accessibility
+## O. Mobile, Visual Quality, and Accessibility
 
 Repeat these checks on the home page, gig list/details, profile, My Gigs, proposal form, project list/details, and project management.
 
@@ -339,7 +353,7 @@ Repeat these checks on the home page, gig list/details, profile, My Gigs, propos
 | UI-09 | Check all forms. | Every input has a visible, understandable label; required information and errors are clear. | |
 | UI-10 | Open every major page and watch for visual inconsistency. | Colors, spacing, typography, cards, buttons, alerts, and dialogs look consistent and professional. | |
 
-## O. Basic Cross-Browser Test
+## P. Basic Cross-Browser Test
 
 | ID | Steps | Expected result | Result |
 |---|---|---|---|

@@ -21,6 +21,8 @@ import { createProposalService } from "./modules/proposals/proposal.service.js";
 import { createProjectService } from "./modules/projects/project.service.js";
 import { createParticipationService } from "./modules/participation/participation.service.js";
 import { createMessagingService } from "./modules/messaging/messaging.service.js";
+import { createNotificationService } from "./modules/notifications/notification.service.js";
+import { createNotificationWriter } from "./modules/notifications/notification.writer.js";
 
 export function createApp({
   config,
@@ -35,6 +37,7 @@ export function createApp({
   projectService: projectServiceOverride,
   participationService: participationServiceOverride,
   messagingService: messagingServiceOverride,
+  notificationService: notificationServiceOverride,
 }) {
   const app = express();
   const emailService =
@@ -44,14 +47,20 @@ export function createApp({
   const profileService = profileServiceOverride ?? createProfileService();
   const skillService = skillServiceOverride ?? createSkillService();
   const gigService = gigServiceOverride ?? createGigService({ config });
+  const notificationWriter = createNotificationWriter();
   const proposalService =
-    proposalServiceOverride ?? createProposalService({ config });
+    proposalServiceOverride ??
+    createProposalService({ config, notificationWriter });
   const projectService =
     projectServiceOverride ?? createProjectService({ config });
   const participationService =
-    participationServiceOverride ?? createParticipationService({ config });
+    participationServiceOverride ??
+    createParticipationService({ config, notificationWriter });
   const messagingService =
-    messagingServiceOverride ?? createMessagingService({ config });
+    messagingServiceOverride ??
+    createMessagingService({ config, notificationWriter });
+  const notificationService =
+    notificationServiceOverride ?? createNotificationService({ config });
   app.disable("x-powered-by");
   app.set("trust proxy", config.trustProxy);
   app.use(requestContext);
@@ -137,6 +146,7 @@ export function createApp({
       projectService,
       participationService,
       messagingService,
+      notificationService,
     }),
   );
   app.use(notFoundHandler);

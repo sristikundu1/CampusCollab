@@ -43,6 +43,7 @@ export function createProposalService({
   AffiliationModel = UniversityAffiliation,
   AuditModel = AuditEvent,
   OutboxModel = OutboxEvent,
+  notificationWriter = null,
   transaction = withTransaction,
 } = {}) {
   const cursorCodec = createCursorCodec(config.csrfSecret);
@@ -419,6 +420,17 @@ export function createProposalService({
         version: created.version,
         payload: { gigId: String(gigId) },
       });
+      await notificationWriter?.create(
+        {
+          recipientId: gig.ownerId,
+          actorId: userId,
+          sourceEventId: `PROPOSAL_SUBMITTED:${created._id}:${created.version}`,
+          category: "PROPOSAL_RECEIVED",
+          targetType: "PROPOSAL",
+          targetId: created._id,
+        },
+        session,
+      );
       proposalId = created._id;
     });
     return get(userId, proposalId);
@@ -745,6 +757,17 @@ export function createProposalService({
             applicantId: String(proposal.applicantId),
           },
         });
+        await notificationWriter?.create(
+          {
+            recipientId: proposal.applicantId,
+            actorId: userId,
+            sourceEventId: `PROPOSAL_ACCEPTED:${updatedProposal._id}:${updatedProposal.version}`,
+            category: "PROPOSAL_ACCEPTED",
+            targetType: "PROPOSAL",
+            targetId: updatedProposal._id,
+          },
+          session,
+        );
         proposalIdResult = updatedProposal._id;
         gigIdResult = gig._id;
       } else {
@@ -784,6 +807,18 @@ export function createProposalService({
           version: updated.version,
           payload: { gigId: String(gig._id) },
         });
+        if (target === "REJECTED")
+          await notificationWriter?.create(
+            {
+              recipientId: proposal.applicantId,
+              actorId: userId,
+              sourceEventId: `PROPOSAL_REJECTED:${updated._id}:${updated.version}`,
+              category: "PROPOSAL_REJECTED",
+              targetType: "PROPOSAL",
+              targetId: updated._id,
+            },
+            session,
+          );
         proposalIdResult = updated._id;
         gigIdResult = gig._id;
       }

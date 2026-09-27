@@ -37,6 +37,7 @@ export function createParticipationService({
   AffiliationModel = UniversityAffiliation,
   AuditModel = AuditEvent,
   OutboxModel = OutboxEvent,
+  notificationWriter = null,
   transaction = withTransaction,
 } = {}) {
   const cursorCodec = createCursorCodec(config.csrfSecret);
@@ -234,6 +235,17 @@ export function createParticipationService({
         userId,
         requestId: context.requestId,
       });
+      await notificationWriter?.create(
+        {
+          recipientId: project.ownerId,
+          actorId: userId,
+          sourceEventId: `JOIN_REQUEST_SUBMITTED:${created._id}:${created.version}`,
+          category: "JOIN_REQUEST_RECEIVED",
+          targetType: "JOIN_REQUESTS",
+          targetId: created._id,
+        },
+        session,
+      );
       id = created._id;
     });
     return getJoin(userId, id);
@@ -324,6 +336,17 @@ export function createParticipationService({
         userId: input.inviteeId,
         requestId: context.requestId,
       });
+      await notificationWriter?.create(
+        {
+          recipientId: input.inviteeId,
+          actorId: userId,
+          sourceEventId: `INVITATION_SENT:${created._id}:${created.version}`,
+          category: "PROJECT_INVITATION_RECEIVED",
+          targetType: "INVITATIONS",
+          targetId: created._id,
+        },
+        session,
+      );
       id = created._id;
     });
     return getInvitation(userId, id);
@@ -550,6 +573,18 @@ export function createParticipationService({
         userId: type === "JOIN_REQUEST" ? item.applicantId : item.inviteeId,
         requestId: context.requestId,
       });
+      if (type === "INVITATION" && target === "REJECTED")
+        await notificationWriter?.create(
+          {
+            recipientId: item.inviterId,
+            actorId: userId,
+            sourceEventId: `INVITATION_REJECTED:${item._id}:${item.version}`,
+            category: "PROJECT_INVITATION_REJECTED",
+            targetType: "PROJECT",
+            targetId: item.projectId,
+          },
+          session,
+        );
       resultId = item._id;
     });
     return type === "JOIN_REQUEST"
@@ -723,6 +758,20 @@ export function createParticipationService({
         userId: memberId,
         requestId: context.requestId,
       });
+      await notificationWriter?.create(
+        {
+          recipientId: type === "JOIN_REQUEST" ? memberId : project.ownerId,
+          actorId: userId,
+          sourceEventId: `${type}_ACCEPTED:${source._id}:${source.version}`,
+          category:
+            type === "JOIN_REQUEST"
+              ? "JOIN_REQUEST_ACCEPTED"
+              : "PROJECT_INVITATION_ACCEPTED",
+          targetType: "PROJECT",
+          targetId: project._id,
+        },
+        session,
+      );
       membershipId = membership._id;
     });
     return getMembership(userId, membershipId);
@@ -843,6 +892,20 @@ export function createParticipationService({
         userId: membership.userId,
         requestId: context.requestId,
       });
+      await notificationWriter?.create(
+        {
+          recipientId: target === "LEFT" ? project.ownerId : membership.userId,
+          actorId,
+          sourceEventId: `PROJECT_MEMBER_${target}:${membership._id}:${membership.version}`,
+          category:
+            target === "LEFT"
+              ? "PROJECT_MEMBER_LEFT"
+              : "PROJECT_MEMBER_REMOVED",
+          targetType: "PROJECT",
+          targetId: project._id,
+        },
+        session,
+      );
       id = membership._id;
     });
     return getMembership(actorId, id);
@@ -945,6 +1008,17 @@ export function createParticipationService({
         userId: item.applicantId,
         requestId: context.requestId,
       });
+      await notificationWriter?.create(
+        {
+          recipientId: item.applicantId,
+          actorId: userId,
+          sourceEventId: `JOIN_REQUEST_REJECTED:${item._id}:${item.version}`,
+          category: "JOIN_REQUEST_REJECTED",
+          targetType: "PROJECT",
+          targetId: item.projectId,
+        },
+        session,
+      );
       result = item._id;
     });
     return getJoin(userId, result);

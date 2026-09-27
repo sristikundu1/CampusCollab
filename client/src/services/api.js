@@ -211,3 +211,11 @@ export const messagingApi = {
   markRead: (conversationId, messageId) =>
     api.post(`/conversations/${conversationId}/read`, { messageId }),
 };
+
+export const notificationApi = {
+  list: (params = {}) => api.get("/notifications", { params }),
+  unreadCount: () => api.get("/notifications/unread-count"),
+  markRead: (notificationId) =>
+    api.patch(`/notifications/${notificationId}/read`),
+  markAllRead: () => api.patch("/notifications/read-all"),
+};

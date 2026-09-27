@@ -44,14 +44,13 @@ The application is organized as a React single-page application and a modular Ex
 - Receive near-real-time updates through visibility-aware polling that works with Vercel serverless deployment
 - Use the responsive two-pane desktop layout or focused list/chat mobile flow
 
-### Messaging
+### Notifications
 
-- Start one idempotent conversation for an accepted gig engagement or active project team
-- View participant-only conversation details, latest previews, and authoritative unread counts
-- Send immutable plain-text messages with duplicate retry protection and per-account rate limiting
-- Load deterministic cursor-paginated history and persist per-participant read state
-- Receive near-real-time updates through visibility-aware polling that works with Vercel serverless deployment
-- Use the responsive two-pane desktop layout or focused list/chat mobile flow
+- Receive trusted in-app notifications for proposals, project participation, membership changes, and messages
+- See a persisted unread badge in the application header
+- Browse bounded cursor-paginated activity and mark one or all notifications as read
+- Open safe server-generated links to the related proposal, project, participation inbox, or conversation
+- Avoid duplicate notices when idempotent commands are retried or message history is polled
 
 ### Platform foundations
 
@@ -90,7 +89,7 @@ flowchart LR
     M --> GIG
     M --> PROJECT
     M --> MESSAGE
-    M --> MESSAGE
+    M --> NOTIFICATION
 
     subgraph MODULES[Modular monolith]
       AUTH[Auth]
@@ -98,7 +97,7 @@ flowchart LR
       GIG[Gigs and proposals]
       PROJECT[Projects and participation]
       MESSAGE[Messaging]
-      MESSAGE[Messaging]
+      NOTIFICATION[Notifications]
     end
 
     AUTH --> DB[(MongoDB)]
@@ -106,7 +105,7 @@ flowchart LR
     GIG --> DB
     PROJECT --> DB
     MESSAGE --> DB
-    MESSAGE --> DB
+    NOTIFICATION --> DB
     AUTH --> EMAIL[Brevo Transactional Email API]
 ```
 

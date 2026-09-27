@@ -3,6 +3,7 @@ import { Logo } from "../Logo.jsx";
 import { Spinner } from "../Spinner.jsx";
 import { useAuth } from "../../context/auth-context.js";
 import { UserMenu } from "./UserMenu.jsx";
+import { NotificationBell } from "../notifications/NotificationBell.jsx";
 
 const publicLinks = [
   { to: "/gigs", label: "Find gigs" },
@@ -44,7 +45,10 @@ export function SiteHeader() {
               <Spinner label="" />
             </span>
           ) : isAuthenticated ? (
-            <UserMenu />
+            <div className="flex items-center gap-1">
+              <NotificationBell />
+              <UserMenu />
+            </div>
           ) : (
             <Link to="/login" className="btn-primary !px-4 !py-2.5">
               Get Started

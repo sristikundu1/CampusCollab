@@ -136,6 +136,11 @@ const MessagesPage = lazy(() =>
     default: module.MessagesPage,
   })),
 );
+const NotificationsPage = lazy(() =>
+  import("./pages/NotificationsPage.jsx").then((module) => ({
+    default: module.NotificationsPage,
+  })),
+);
 
 function PageFallback() {
   return (
@@ -217,6 +222,10 @@ export function App() {
             element={<ParticipationInboxPage type="invitations" />}
           />
           <Route path="/dashboard/messages" element={<MessagesPage />} />
+          <Route
+            path="/dashboard/notifications"
+            element={<NotificationsPage />}
+          />
           <Route
             path="/dashboard/messages/:conversationId"
             element={<MessagesPage />}

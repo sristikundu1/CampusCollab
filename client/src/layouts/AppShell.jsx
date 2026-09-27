@@ -5,6 +5,7 @@ import {
   FolderKanban,
   LayoutDashboard,
   MailCheck,
+  Bell,
   MessagesSquare,
   Menu,
   Search,
@@ -16,6 +17,7 @@ import { useState } from "react";
 import { NavLink } from "react-router-dom";
 import { Logo } from "../components/Logo.jsx";
 import { UserMenu } from "../components/navigation/UserMenu.jsx";
+import { NotificationBell } from "../components/notifications/NotificationBell.jsx";
 
 const links = [
   { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
@@ -31,6 +33,7 @@ const links = [
   },
   { to: "/dashboard/invitations", label: "Invitations", icon: MailCheck },
   { to: "/dashboard/messages", label: "Messages", icon: MessagesSquare },
+  { to: "/dashboard/notifications", label: "Notifications", icon: Bell },
   { to: "/dashboard/bookmarks", label: "Bookmarks", icon: Bookmark },
   { to: "/dashboard/profile", label: "Profile", icon: UserRound },
 ];
@@ -51,7 +54,10 @@ export function AppShell({ children }) {
             </button>
             <Logo />
           </div>
-          <UserMenu />
+          <div className="flex items-center gap-1">
+            <NotificationBell />
+            <UserMenu />
+          </div>
         </div>
       </header>
       <div className="mx-auto grid min-h-0 w-full max-w-7xl flex-1 lg:grid-cols-[220px_minmax(0,1fr)]">

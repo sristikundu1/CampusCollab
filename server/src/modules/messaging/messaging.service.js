@@ -31,6 +31,7 @@ export function createMessagingService({
   ProposalModel = Proposal,
   GigModel = Gig,
   ProfileModel = Profile,
+  notificationWriter = null,
   transaction = withTransaction,
 } = {}) {
   const cursorCodec = createCursorCodec(config.csrfSecret);
@@ -393,6 +394,23 @@ export function createMessagingService({
           "CONVERSATION_CHANGED",
           "The conversation changed. Refresh and try again.",
         );
+      for (const participant of conversation.participants) {
+        if (
+          participant.status === "ACTIVE" &&
+          !sameId(participant.userId, userId)
+        )
+          await notificationWriter?.create(
+            {
+              recipientId: participant.userId,
+              actorId: userId,
+              sourceEventId: `MESSAGE_SENT:${message._id}`,
+              category: "MESSAGE_RECEIVED",
+              targetType: "CONVERSATION",
+              targetId: conversation._id,
+            },
+            session,
+          );
+      }
       messageId = message._id;
     });
     const message = await q(MessageModel.findById(messageId), {

@@ -7,6 +7,7 @@ import { createProposalRouter } from "../modules/proposals/proposal.routes.js";
 import { createProjectRouter } from "../modules/projects/project.routes.js";
 import { createParticipationRouter } from "../modules/participation/participation.routes.js";
 import { createMessagingRouter } from "../modules/messaging/messaging.routes.js";
+import { createNotificationRouter } from "../modules/notifications/notification.routes.js";
 
 export function createV1Router(dependencies) {
   const router = Router();
@@ -24,5 +25,6 @@ export function createV1Router(dependencies) {
   router.use(createProjectRouter(dependencies));
   router.use(createParticipationRouter(dependencies));
   router.use(createMessagingRouter(dependencies));
+  router.use(createNotificationRouter(dependencies));
   return router;
 }
