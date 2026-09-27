@@ -18,14 +18,14 @@ export function VerifyEmailPage() {
   const [email, setEmail] = useState(location.state?.email || "");
   const [code, setCode] = useState("");
   const [remaining, setRemaining] = useState(
-    location.state?.expiresInSeconds || 600,
+    location.state?.expiresInSeconds || 180,
   );
   const resend = async () => {
     setState("loading");
     try {
       const { data } = await authApi.resend(email);
       setMessage(data.data.message);
-      setRemaining(data.data.expiresInSeconds || 600);
+      setRemaining(data.data.expiresInSeconds || 180);
       setCode("");
       setState("waiting");
     } catch (error) {

@@ -1,6 +1,7 @@
 import { RotateCcw } from "lucide-react";
 import { useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
+import { PasswordInput } from "../components/PasswordInput.jsx";
 import { AuthLayout } from "../layouts/AuthLayout.jsx";
 import { accountApi, apiError } from "../services/api.js";
 
@@ -62,10 +63,11 @@ export function RecoverAccountPage() {
           <label className="text-sm font-bold" htmlFor="recovery-password">
             Password
           </label>
-          <input
+          <PasswordInput
             id="recovery-password"
-            className="field mt-2"
-            type="password"
+            className="field"
+            wrapperClassName="mt-2"
+            visibilityLabel="password"
             autoComplete="current-password"
             required
             value={password}

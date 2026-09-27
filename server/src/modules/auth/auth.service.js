@@ -22,7 +22,7 @@ import { VerificationChallenge } from "./verification-challenge.model.js";
 
 const HOUR = 60 * 60 * 1000;
 const DAY = 24 * HOUR;
-const VERIFICATION_CODE_TTL_MS = 10 * 60 * 1000;
+const VERIFICATION_CODE_TTL_MS = 3 * 60 * 1000;
 const MAX_VERIFICATION_ATTEMPTS = 5;
 
 export function generateVerificationCode() {
@@ -173,7 +173,7 @@ export function createAuthService({
         result.affiliation._id,
         input.email,
       );
-      await emailService.sendVerification(input.email, code, 10);
+      await emailService.sendVerification(input.email, code, 3);
       return {
         message:
           "Account created. Enter the code sent to your university email.",
@@ -196,7 +196,7 @@ export function createAuthService({
           await emailService.sendVerification(
             email,
             await issueVerificationCode(user._id, affiliation._id, email),
-            10,
+            3,
           );
       }
       return {

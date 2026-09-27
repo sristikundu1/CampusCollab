@@ -2,7 +2,7 @@ import { z } from "zod";
 
 const password = z
   .string()
-  .min(10)
+  .min(6)
   .max(128)
   .regex(/[a-z]/, "Include a lowercase letter")
   .regex(/[A-Z]/, "Include an uppercase letter")

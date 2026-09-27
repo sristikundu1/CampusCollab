@@ -5,7 +5,11 @@ import { Spinner } from "../Spinner.jsx";
 
 const schema = z.object({
   status: z.enum(["AVAILABLE", "LIMITED", "UNAVAILABLE"]),
-  hoursPerWeek: z.coerce.number().int().min(0).max(80),
+  hoursPerWeek: z.coerce
+    .number()
+    .int("Hours per week must be a whole number")
+    .min(0, "Hours per week cannot be negative")
+    .max(80, "Hours per week cannot exceed 80"),
   availableFrom: z.string(),
 });
 export function AvailabilityEditor({ availability, saving, onSave }) {
@@ -36,7 +40,11 @@ export function AvailabilityEditor({ availability, saving, onSave }) {
     <section className="surface p-6">
       <p className="eyebrow">Availability</p>
       <h2 className="mt-1 text-xl font-bold">When you can contribute</h2>
-      <form className="mt-5 space-y-4" onSubmit={handleSubmit(submit)}>
+      <form
+        className="mt-5 space-y-4"
+        onSubmit={handleSubmit(submit)}
+        noValidate
+      >
         <label className="block">
           <span className="mb-2 block text-sm font-semibold">Status</span>
           <select className="field" {...register("status")}>
@@ -53,6 +61,9 @@ export function AvailabilityEditor({ availability, saving, onSave }) {
             <input
               className="field"
               type="number"
+              min="0"
+              max="80"
+              step="1"
               {...register("hoursPerWeek")}
             />
             {errors.hoursPerWeek && (

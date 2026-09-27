@@ -9,7 +9,7 @@ import { AuthLayout } from "../layouts/AuthLayout.jsx";
 import { apiError, authApi } from "../services/api.js";
 const password = z
   .string()
-  .min(10, "Use at least 10 characters")
+  .min(6, "Use at least 6 characters")
   .regex(/[A-Z]/, "Include an uppercase letter")
   .regex(/[a-z]/, "Include a lowercase letter")
   .regex(/[0-9]/, "Include a number");

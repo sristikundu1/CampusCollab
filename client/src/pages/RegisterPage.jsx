@@ -9,7 +9,7 @@ import { AuthLayout } from "../layouts/AuthLayout.jsx";
 import { apiError, authApi } from "../services/api.js";
 const password = z
   .string()
-  .min(10, "Use at least 10 characters")
+  .min(6, "Use at least 6 characters")
   .regex(/[a-z]/, "Include a lowercase letter")
   .regex(/[A-Z]/, "Include an uppercase letter")
   .regex(/[0-9]/, "Include a number");
@@ -109,7 +109,7 @@ export function RegisterPage() {
           label="Password"
           type="password"
           autoComplete="new-password"
-          placeholder="At least 10 characters"
+          placeholder="At least 6 characters"
           error={errors.password?.message}
           {...register("password")}
         />

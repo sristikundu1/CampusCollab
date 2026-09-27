@@ -1,4 +1,5 @@
 import { cloneElement } from "react";
+import { PasswordInput } from "./PasswordInput.jsx";
 
 export function FormField({ label, error, hint, children, ...props }) {
   const id = props.id || props.name || children?.props?.name;
@@ -8,6 +9,14 @@ export function FormField({ label, error, hint, children, ...props }) {
       "aria-invalid": Boolean(error),
       "aria-describedby": error ? `${id}-error` : undefined,
     })
+  ) : props.type === "password" ? (
+    <PasswordInput
+      id={id}
+      visibilityLabel={label.toLowerCase()}
+      aria-invalid={Boolean(error)}
+      aria-describedby={error ? `${id}-error` : undefined}
+      {...props}
+    />
   ) : (
     <input
       id={id}
@@ -18,10 +27,13 @@ export function FormField({ label, error, hint, children, ...props }) {
     />
   );
   return (
-    <label htmlFor={id} className="block">
-      <span className="mb-2 block text-sm font-semibold text-slate-700">
+    <div className="block">
+      <label
+        htmlFor={id}
+        className="mb-2 block text-sm font-semibold text-slate-700"
+      >
         {label}
-      </span>
+      </label>
       {control}{" "}
       {error ? (
         <span
@@ -33,6 +45,6 @@ export function FormField({ label, error, hint, children, ...props }) {
       ) : hint ? (
         <span className="mt-1.5 block text-xs text-slate-500">{hint}</span>
       ) : null}
-    </label>
+    </div>
   );
 }

@@ -178,6 +178,24 @@ describe("ProfilePage", () => {
     expect(mocks.updateAvailability.mock.calls[0][0].hoursPerWeek).toBe(8);
   });
 
+  it("does not submit negative weekly availability", async () => {
+    const user = userEvent.setup();
+    renderPage();
+    await screen.findByText("React");
+
+    fireEvent.change(screen.getByLabelText("Hours per week"), {
+      target: { value: "-1" },
+    });
+    await user.click(
+      screen.getByRole("button", { name: "Update availability" }),
+    );
+
+    expect(
+      await screen.findByText("Hours per week cannot be negative"),
+    ).toBeInTheDocument();
+    expect(mocks.updateAvailability).not.toHaveBeenCalled();
+  });
+
   it("creates and selects a custom profile skill", async () => {
     const user = userEvent.setup();
     renderPage();

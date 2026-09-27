@@ -140,13 +140,13 @@ test("resending supersedes prior codes and never persists plaintext", async () =
 
   const result = await authService.resendVerification("student@example.edu");
 
-  assert.equal(result.expiresInSeconds, 600);
-  assert.deepEqual(sent[0], ["student@example.edu", "004200", 10]);
+  assert.equal(result.expiresInSeconds, 180);
+  assert.deepEqual(sent[0], ["student@example.edu", "004200", 3]);
   assert.deepEqual(userQueries[0].status.$in, [
     "PENDING_VERIFICATION",
     "ACTIVE",
   ]);
   assert.equal(created[0].tokenHash, hashOpaqueToken("004200", sessionSecret));
   assert.equal("code" in created[0], false);
-  assert.ok(created[0].expiresAt.getTime() - Date.now() <= 600_000);
+  assert.ok(created[0].expiresAt.getTime() - Date.now() <= 180_000);
 });

@@ -27,7 +27,7 @@ function renderPage({ requestCode = false } = {}) {
           state: {
             email: "student@example.edu",
             message: "Enter the code from your inbox.",
-            expiresInSeconds: 600,
+            expiresInSeconds: 180,
             requestCode,
           },
         },
@@ -45,7 +45,7 @@ beforeEach(() => {
   mocks.resend.mockImplementation(() =>
     response({
       message: "A new verification code has been sent.",
-      expiresInSeconds: 600,
+      expiresInSeconds: 180,
     }),
   );
 });

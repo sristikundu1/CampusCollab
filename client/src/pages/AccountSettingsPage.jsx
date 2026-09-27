@@ -1,6 +1,7 @@
 import { AlertTriangle, CalendarClock, KeyRound } from "lucide-react";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { PasswordInput } from "../components/PasswordInput.jsx";
 import { useAuth } from "../context/auth-context.js";
 import { useToast } from "../context/toast-context.js";
 import { AppShell } from "../layouts/AppShell.jsx";
@@ -94,10 +95,11 @@ export function AccountSettingsPage() {
             >
               Current password
             </label>
-            <input
+            <PasswordInput
               id="delete-password"
-              className="field mt-2"
-              type="password"
+              className="field"
+              wrapperClassName="mt-2"
+              visibilityLabel="current password"
               autoComplete="current-password"
               required
               value={password}

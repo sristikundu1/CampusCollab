@@ -8,6 +8,10 @@ import {
   opaqueTokenMatches,
 } from "../../src/lib/crypto/opaque-token.js";
 import { hashPassword, verifyPassword } from "../../src/lib/crypto/password.js";
+import {
+  registerRequest,
+  resetPasswordRequest,
+} from "../../src/modules/auth/auth.validation.js";
 import { availabilityRequest } from "../../src/modules/profiles/profile.validation.js";
 import {
   invitationListRequest,
@@ -52,6 +56,36 @@ test("passwords use salted scrypt hashes and constant-time verification", async 
   assert.equal(first.includes("StrongPassword1"), false);
   assert.equal(await verifyPassword("StrongPassword1", first), true);
   assert.equal(await verifyPassword("WrongPassword1", first), false);
+});
+
+test("registration and reset accept six-character strong passwords", () => {
+  const password = "Abc123";
+  assert.equal(
+    registerRequest.safeParse({
+      params: {},
+      query: {},
+      body: {
+        name: "Student",
+        email: "student@example.edu",
+        password,
+        confirmPassword: password,
+        primaryExperience: "SEEKING_WORK",
+      },
+    }).success,
+    true,
+  );
+  assert.equal(
+    resetPasswordRequest.safeParse({
+      params: {},
+      query: {},
+      body: {
+        token: "x".repeat(32),
+        password,
+        confirmPassword: password,
+      },
+    }).success,
+    true,
+  );
 });
 
 test("availability rejects contradictory state and weekly-hour combinations", () => {
